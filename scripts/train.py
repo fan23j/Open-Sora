@@ -32,6 +32,15 @@ from opensora.utils.misc import all_reduce_mean, format_numel_str, get_model_num
 from opensora.utils.train_utils import MaskGenerator, update_ema
 
 
+def calculate_weight_norm(model):
+    total_norm = 0.0
+    for param in model.parameters():
+        param_norm = param.data.norm(2)
+        total_norm += param_norm.item() ** 2
+    total_norm = total_norm ** 0.5
+    return total_norm
+
+
 def main():
     # ======================================================
     # 1. args & cfg
@@ -282,6 +291,9 @@ def main():
                     running_loss = 0
                     log_step = 0
                     writer.add_scalar("loss", loss.item(), global_step)
+
+                    weight_norm = calculate_weight_norm(model)
+
                     if cfg.wandb:
                         wandb.log(
                             {
@@ -291,6 +303,7 @@ def main():
                                 "avg_loss": avg_loss,
                                 "acc_step": acc_step,
                                 "lr": optimizer.param_groups[0]["lr"],
+                                "weight_norm": weight_norm,
                             },
                             step=global_step,
                         )
