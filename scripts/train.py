@@ -2,6 +2,10 @@ from copy import deepcopy
 from datetime import timedelta
 from pprint import pprint
 import time
+import numpy as np
+import os
+import random
+
 import torch
 import torch.distributed as dist
 import wandb
@@ -19,8 +23,8 @@ from opensora.acceleration.parallel_states import (
     set_sequence_parallel_group,
 )
 from opensora.acceleration.plugin import ZeroSeqParallelPlugin
-from opensora.datasets import prepare_dataloader, prepare_variable_dataloader
-from opensora.registry import DATASETS, MODELS, SCHEDULERS, build_module
+from opensora.datasets import prepare_dataloader, prepare_variable_dataloader, save_sample
+from opensora.registry import DATASETS, MODELS, SCHEDULERS, SCHEDULERS_INFERENCE, build_module
 from opensora.utils.ckpt_utils import create_logger, load, model_sharding, record_model_param_shape, save
 from opensora.utils.config_utils import (
     create_experiment_workspace,
@@ -101,6 +105,34 @@ class ConstantWarmupLR(WarmupScheduler):
         super().__init__(optimizer, warmup_steps, base_scheduler, last_epoch=last_epoch)
 
 
+def save_rng_state():
+    rng_state = {
+        'torch': torch.get_rng_state(),
+        'torch_cuda': torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+        'numpy': np.random.get_state(),
+        'random': random.getstate()
+    }
+    return rng_state
+
+
+def load_rng_state(rng_state):
+    torch.set_rng_state(rng_state['torch'])
+    if rng_state['torch_cuda'] is not None:
+        torch.cuda.set_rng_state_all(rng_state['torch_cuda'])
+    np.random.set_state(rng_state['numpy'])
+    random.setstate(rng_state['random'])
+
+
+#from mmengine.runner import set_random_seed
+def set_seed_custom(seed):
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    #set_random_seed(seed=seed)
+
+
 def calculate_weight_norm(model):
     total_norm = 0.0
     for param in model.parameters():
@@ -108,6 +140,100 @@ def calculate_weight_norm(model):
         total_norm += param_norm.item() ** 2
     total_norm = total_norm ** 0.5
     return total_norm
+
+
+def ensure_parent_directory_exists(file_path):
+    directory_path = os.path.dirname(file_path)
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Created directory: {directory_path}")
+
+
+z_log = None
+def log_sample(model, text_encoder, vae, scheduler, coordinator, cfg, epoch, exp_dir, global_step, dtype, device):
+    global z_log
+    rng_state = save_rng_state()
+    back_to_train_model = model.training
+    back_to_train_vae = vae.training
+    vae = vae.eval()
+    model = model.eval()
+    text_encoder.y_embedder = (
+        model.module.y_embedder
+    )  # hack for classifier-free guidance
+    save_dir = os.path.join(
+        exp_dir, f"epoch{epoch}-global_step{global_step + 1}"
+    )
+
+    prompts = [
+        "Two pirate ships battling each other with canons as they sail inside a cup filled with coffee. The two pirate ships are fully in view, and the camera view is an aeriel view looking down at a 45 degree angle at the ships.",
+        "Stunning aerial view of a road winding through a dark green forest. Mountains appear in the distance.",
+        "Flying through a modern city.",
+        "A savanna full of animals.",
+        "An archeological site in the mayan djungle. A mayan pyramid rises over the green landscape.",
+        "a close-up view of a vibrant scene from nature. The foreground is dominated by a cluster of small, white flowers with green leaves, their delicate petals and stems creating a sense of softness and freshness. These flowers are the main focus of the scene, their bright white color contrasting with the surrounding greenery.  In the background, there's a blurred landscape that appears to be a field or meadow, filled with tall, dry grasses that have turned a warm, golden color, suggesting either the onset of autumn or the end of a dry season. The grasses are scattered with small white flowers that echo the ones in the foreground, creating a sense of continuity and harmony in the scene.  The style of the scene is realistic, with a shallow depth of field that blurs the background, drawing the viewer's attention to the flowers in the foreground. The lighting in the scene is soft and diffused, with no harsh shadows, which enhances the natural and serene atmosphere of the scene. The colors are rich and saturated, particularly the whites of the flowers and the golden hues of the grasses, which contribute to the overall vibrancy of the scene",
+        "a serene scene of a small town nestled at the foot of a mountain range. The town, with its cluster of houses and buildings, is enveloped by a lush expanse of trees and shrubbery. The sky overhead is clear, casting a soft, diffused morning light over the landscape. In the distance, the mountains rise majestically, their peaks obscured by thin layers of snow. The colors in the scene are predominantly green and gray, reflecting the natural hues of the landscape. The green of the vegetation contrasts with the gray of the mountains and the overcast sky, creating a harmonious balance of colors.  Despite the absence of any discernible action or movement, the scene conveys a sense of tranquility and peace, as if time has slowed down in this secluded corner of the world. There are no texts or countable objects in the scene, and the relative positions of the objects suggest a typical layout for a small town, with houses and buildings scattered around a central area. Overall, the scene presents a picturesque snapshot of a quiet moment in a peaceful mountain town."
+    ]
+
+    with torch.no_grad():
+        image_size = (256, 256)
+        num_frames = 16
+        fps = 8
+        input_size = (num_frames, *image_size)
+        latent_size = vae.get_latent_size(input_size)
+        if z_log is None:
+            rng = np.random.default_rng(seed=42)
+            z_log = rng.normal(size=(len(prompts), vae.out_channels, *latent_size))
+        z = torch.tensor(z_log, device=device, dtype=float).to(dtype=dtype)
+        set_seed_custom(42)
+        samples = scheduler.sample(
+            model,
+            text_encoder,
+            z=z,
+            prompts=prompts,
+            device=device,
+            additional_args=dict(
+                height=torch.tensor([image_size[0]], device=device, dtype=dtype).repeat(len(prompts)),
+                width=torch.tensor([image_size[1]], device=device, dtype=dtype).repeat(len(prompts)),
+                num_frames=torch.tensor([num_frames], device=device, dtype=dtype).repeat(len(prompts)),
+                ar=torch.tensor([image_size[0] / image_size[1]], device=device, dtype=dtype).repeat(len(prompts)),
+                fps=torch.tensor([fps], device=device, dtype=dtype).repeat(len(prompts)),
+            ),
+        )
+        samples = vae.decode(samples.to(dtype))
+
+        # 4.4. save samples
+        if coordinator.is_master():
+            for sample_idx, sample in enumerate(samples):
+                save_path = os.path.join(
+                    save_dir, f"sample_{sample_idx}"
+                )
+                ensure_parent_directory_exists(save_path)
+                save_sample(
+                    sample,
+                    fps=fps,
+                    save_path=save_path,
+                )
+                if cfg.wandb:
+                    wandb.log(
+                        {
+                            f"eval/prompt_{sample_idx}": wandb.Video(
+                                os.path.abspath(save_path + ".mp4"),
+                                caption=prompts[sample_idx],
+                                format="mp4",
+                                fps=fps,
+                            )
+                        },
+                        step=global_step,
+                    )
+
+    if back_to_train_model:
+        model = model.train()
+    if back_to_train_vae:
+        vae = vae.train()
+    text_encoder.y_embedder = None
+
+    load_rng_state(rng_state)
+
 
 
 def main():
@@ -229,6 +355,7 @@ def main():
 
     # 4.4. build scheduler
     scheduler = build_module(cfg.scheduler, SCHEDULERS)
+    scheduler_inference = build_module(cfg.scheduler_inference, SCHEDULERS)
 
     # 4.5. setup optimizer
     optimizer = HybridAdam(
@@ -298,6 +425,11 @@ def main():
         dataloader.sampler.set_start_index(sampler_start_idx)
     model_sharding(ema)
 
+    # log prompts for pre-training ckpt
+    first_global_step = start_epoch * num_steps_per_epoch + start_step
+    if coordinator.is_master():
+        log_sample(model, text_encoder, vae, scheduler_inference, coordinator, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
+
     # 6.2. training loop
     for epoch in range(start_epoch, cfg.epochs):
         if cfg.dataset.type == "VideoTextDataset":
@@ -360,7 +492,7 @@ def main():
 
 
                 # Log to tensorboard
-                if coordinator.is_master() and (global_step + 1) % cfg.log_every == 0:
+                if coordinator.is_master() and global_step % cfg.log_every == 0:
                     avg_loss = running_loss / log_step
                     pbar.set_postfix({"loss": avg_loss, "step": step, "global_step": global_step})
                     running_loss = 0
@@ -386,7 +518,7 @@ def main():
                         iteration_times = []
 
                 # Save checkpoint
-                if cfg.ckpt_every > 0 and (global_step + 1) % cfg.ckpt_every == 0:
+                if cfg.ckpt_every > 0 and global_step % cfg.ckpt_every == 0 and global_step != 0:
                     save(
                         booster,
                         model,
@@ -405,6 +537,11 @@ def main():
                     logger.info(
                         f"Saved checkpoint at epoch {epoch} step {step + 1} global_step {global_step + 1} to {exp_dir}"
                     )
+
+                    # log prompts for each checkpoints
+                if coordinator.is_master() and global_step % 250 == 0:
+                    log_sample(model, text_encoder, vae, scheduler_inference, coordinator, cfg, epoch, exp_dir, global_step, dtype, device)
+
 
         # the continue epochs are not resumed, so we need to reset the sampler start index and start step
         if cfg.dataset.type == "VideoTextDataset":
