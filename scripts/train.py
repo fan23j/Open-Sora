@@ -32,6 +32,75 @@ from opensora.utils.misc import all_reduce_mean, format_numel_str, get_model_num
 from opensora.utils.train_utils import MaskGenerator, update_ema
 
 
+from torch.optim.lr_scheduler import LRScheduler as _LRScheduler
+from typing import List
+class WarmupScheduler(_LRScheduler):
+    """Starts with a log space warmup lr schedule until it reaches N epochs then applies
+    the specific scheduler (For example: ReduceLROnPlateau).
+
+    Args:
+        optimizer (:class:`torch.optim.Optimizer`): Wrapped optimizer.
+        warmup_epochs (int): Number of epochs to warmup lr in log space until starting applying the scheduler.
+        after_scheduler (:class:`torch.optim.lr_scheduler`): After warmup_epochs, use this scheduler.
+        last_epoch (int, optional): The index of last epoch, defaults to -1. When last_epoch=-1,
+            the schedule is started from the beginning or When last_epoch=-1, sets initial lr as lr.
+    """
+
+    def __init__(self, optimizer, warmup_epochs: int, after_scheduler: _LRScheduler, last_epoch: int = -1):
+        self.warmup_epochs = warmup_epochs
+        self.after_scheduler = after_scheduler
+        self.finished = False
+        self.min_lr  = 1e-7
+        super().__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        if self.last_epoch >= self.warmup_epochs:
+            if not self.finished:
+                self.after_scheduler.base_lrs = [group['lr'] for group in self.optimizer.param_groups]
+                self.finished = True
+            return self.after_scheduler.get_lr()
+
+        # log linear
+        #return [self.min_lr * ((lr / self.min_lr) ** ((self.last_epoch + 1) / self.warmup_epochs)) for lr in self.base_lrs]
+
+        # cosine warmup
+        return [self.min_lr + (lr - self.min_lr) * 0.5 * (1 - torch.cos(torch.tensor((self.last_epoch + 1) / self.warmup_epochs * torch.pi))) for lr in self.base_lrs]
+
+
+    def step(self, epoch: int = None):
+        if self.finished:
+            if epoch is None:
+                self.after_scheduler.step(None)
+            else:
+                self.after_scheduler.step(epoch - self.warmup_epochs)
+        else:
+            return super().step(epoch)
+
+class ConstantWarmupLR(WarmupScheduler):
+    """Multistep learning rate scheduler with warmup.
+
+    Args:
+        optimizer (:class:`torch.optim.Optimizer`): Wrapped optimizer.
+        total_steps (int): Number of total training steps.
+        warmup_steps (int, optional): Number of warmup steps, defaults to 0.
+        gamma (float, optional): Multiplicative factor of learning rate decay, defaults to 0.1.
+        num_steps_per_epoch (int, optional): Number of steps per epoch, defaults to -1.
+        last_epoch (int, optional): The index of last epoch, defaults to -1. When last_epoch=-1,
+            the schedule is started from the beginning or When last_epoch=-1, sets initial lr as lr.
+    """
+
+    def __init__(
+        self,
+        optimizer,
+        factor: float,
+        warmup_steps: int = 0,
+        last_epoch: int = -1,
+        **kwargs,
+    ):
+        base_scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer, factor=1, total_iters=-1)
+        super().__init__(optimizer, warmup_steps, base_scheduler, last_epoch=last_epoch)
+
+
 def calculate_weight_norm(model):
     total_norm = 0.0
     for param in model.parameters():
@@ -168,7 +237,7 @@ def main():
         weight_decay=0,
         adamw_mode=True,
     )
-    lr_scheduler = None
+    lr_scheduler = ConstantWarmupLR(optimizer, factor=1, warmup_steps=200, last_epoch=-1)
 
     # 4.6. prepare for training
     if cfg.grad_checkpoint:
@@ -210,7 +279,7 @@ def main():
             model,
             ema,
             optimizer,
-            lr_scheduler,
+            None,# lr_scheduler,
             cfg.load,
             sampler=sampler_to_io if not cfg.start_from_scratch else None,
         )
@@ -273,6 +342,8 @@ def main():
                 booster.backward(loss=loss, optimizer=optimizer)
                 optimizer.step()
                 optimizer.zero_grad()
+                if lr_scheduler is not None:
+                    lr_scheduler.step()
 
                 # Update EMA
                 update_ema(ema, model.module, optimizer=optimizer)
