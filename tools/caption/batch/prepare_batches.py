@@ -45,7 +45,7 @@ def main(args):
             raise ValueError("Please specify the image output directory")
         dataset = extract_images(dataset, args.image_output_dir)
 
-    create_batch_input(dataset, prompt, detail='low', max_size_mb=50, output_dir=args.output)
+    create_batch_input(dataset, prompt, detail='low', max_size_mb=50, output_dir=args.output, name=args.name)
 
 
 if __name__ == "__main__":
@@ -55,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="batches")
     parser.add_argument("--to-images", default=False, action="store_true")
     parser.add_argument("--image-output-dir", type=str, default=None)
+    parser.add_argument("--name", type=str, default='')
     args = parser.parse_args()
 
     main(args)
