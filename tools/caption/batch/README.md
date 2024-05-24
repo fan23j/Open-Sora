@@ -15,7 +15,7 @@ JOB_NAME=job_name
 ```
 python -m tools.caption.batch.prepare_batches ${ROOT_META}/meta_clips_info_fmin1_aes_aesmin5.0.csv \
     --prompt "video" \
-    --output-dir ${ROOT_BATCHES} \
+    --output ${ROOT_BATCHES} \
     --to-images \
     --image-output-dir ${ROOT_IMAGES} \
     --name ${JOB_NAME}
@@ -25,7 +25,7 @@ python -m tools.caption.batch.prepare_batches ${ROOT_META}/meta_clips_info_fmin1
 ```
 python -m tools.caption.batch.prepare_batches ${ROOT_META}/meta_clips_info_fmin1_aes_aesmin5.0.csv \
     --prompt "image" \
-    --output-dir ${ROOT_BATCHES} \
+    --output ${ROOT_BATCHES} \
     --name ${JOB_NAME}
 ```
 
