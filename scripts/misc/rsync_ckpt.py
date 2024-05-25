@@ -40,6 +40,8 @@ def parse_arguments():
     return args
 
 if __name__ == "__main__":
+    args = parse_arguments()
+    
     create_remote_directory(args.remote_path)
 
     # Find all the sub-folders in base_path that contains model weights
