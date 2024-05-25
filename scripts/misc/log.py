@@ -1,7 +1,4 @@
-import time
-import numpy as np
 import os
-import random
 import re
 import argparse
 
@@ -59,7 +56,6 @@ def main():
         path_evals = file.readlines()
         path_evals = [path.strip() for path in path_evals]
     
-    count = 0
     for path in path_evals:
 
         # Search for the pattern in the file path
@@ -80,9 +76,6 @@ def main():
 
         run_log(path, epoch, global_step, args.fps)
 
-        count += 1
-        if count == 2:
-            break
 
 if __name__ == "__main__":
     main()

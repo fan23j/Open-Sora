@@ -59,10 +59,10 @@ def write_sample(model, text_encoder, vae, scheduler, cfg, output_path, dtype, d
             cfg.exp_dir, output_path
         )
         with torch.no_grad():
-            image_size = cfg.eval_image_size
-            num_frames = cfg.eval_num_frames
-            fps = cfg.eval_fps
-            eval_batch_size = cfg.eval_batch_size
+            image_size = cfg.image_size
+            num_frames = cfg.num_frames
+            fps = cfg.fps
+            batch_size = cfg.batch_size
 
             input_size = (num_frames, *image_size)
             latent_size = vae.get_latent_size(input_size)
@@ -75,9 +75,9 @@ def write_sample(model, text_encoder, vae, scheduler, cfg, output_path, dtype, d
             samples = []
             samples_prompt = []
 
-            for i in range(0, len(prompts), eval_batch_size):
-                batch_prompts = prompts[i:i + eval_batch_size]
-                batch_z = z[i:i + eval_batch_size]
+            for i in range(0, len(prompts), batch_size):
+                batch_prompts = prompts[i:i + batch_size]
+                batch_z = z[i:i + batch_size]
                 batch_samples = scheduler.sample(
                     model,
                     text_encoder,
@@ -208,15 +208,11 @@ def main():
         path_ckpts = file.readlines()
         path_ckpts = [path.strip() for path in path_ckpts]
     
-    count = 0
     for path in path_ckpts:
-
         cfg.model["from_pretrained"] = path
         output_path = path.split("/")[-1]
         run_eval(cfg, output_path, coordinator, device)
-        count += 1
-        if count == 2:
-            break
+
 
 if __name__ == "__main__":
     main()
