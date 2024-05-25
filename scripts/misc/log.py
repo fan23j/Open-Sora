@@ -1,6 +1,7 @@
 import os
 import re
 import argparse
+from datetime import datetime
 
 import wandb
 
@@ -27,6 +28,7 @@ def run_log(path, epoch, global_step, fps):
                         step=int(global_step),
                     )
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Argument parser for wandb configuration.")
 
@@ -39,9 +41,10 @@ def parse_arguments():
                         help="Name of the wandb project.")
     parser.add_argument('--wandb-project-entity', type=str, default="lambdalabs",
                         help="Entity name for the wandb project.")
-    parser.add_argument('--wandb-exp-name', type=str, default="step1_24k_15k_64f_lowlr_maxbs",
+    parser.add_argument('--wandb-exp-name', type=str, default="my_awesome_experiment",
                         help="Experiment name for wandb.")
-
+    parser.add_argument('--ckpt', action='store_true', help="Flag to log each ckpt as individual runs")
+    
     # Parse the arguments
     args = parser.parse_args()
 
@@ -49,7 +52,10 @@ def parse_arguments():
 
 def main():    
     args = parse_arguments()
-    wandb.init(project=args.wandb_project_name, entity=args.wandb_project_entity, name=args.wandb_exp_name)
+    if not args.ckpt:
+        now = datetime.now()
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+        wandb.init(project=args.wandb_project_name, entity=args.wandb_project_entity, name=args.wandb_exp_name + "_" + timestamp)
 
     # Open the file and read the lines
     with open(args.eval_path, 'r') as file:
@@ -74,8 +80,18 @@ def main():
             print("No epoch found")
             sys.exit()
 
-        run_log(path, epoch, global_step, args.fps)
+        if not args.ckpt:
+            run_log(path, epoch, global_step, args.fps)
+        else:
+            now = datetime.now()
+            timestamp = now.strftime("%Y%m%d_%H%M%S")
+            exp_name = path.split("/")[-2] + "_ep" + epoch + "_step" + global_step  + "_" + timestamp
+            wandb.init(project=args.wandb_project_name, entity=args.wandb_project_entity, name=exp_name)
+            run_log(path, epoch, global_step, args.fps)
+            wandb.finish()
 
+    if not args.ckpt:
+        wandb.finish()
 
 if __name__ == "__main__":
     main()
