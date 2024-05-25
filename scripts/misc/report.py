@@ -1,3 +1,5 @@
+import os
+import sys
 import argparse
 import math
 
@@ -23,26 +25,23 @@ def parse_arguments():
         nargs='+',
         help='List of runs'
     )
+    parser.add_argument(
+        '--style',
+        type=str,
+        choices=["prompt"],
+        default="prompt",
+        help="Style of panel, one for each prompt or one for each run"
+    )
     # Parse the arguments
     args = parser.parse_args()
 
     return args
 
-def main():    
-    args = parse_arguments()
-    report = wr.Report(
-        project = args.wandb_project_name,
-        title = args.wandb_report_title,
-        entity = args.wandb_project_entity,
-        description = "",
-    )
 
+def create_panel4prompt(args, report):
+    rows_per_panel = math.ceil(len(args.wandb_run_list) / args.num_cols) if args.wandb_run_list else 2
     idx_prompt = range(0, args.num_prompt)
-    num_runs = len(args.wandb_run_list)
-
     report.blocks = []
-    rows_per_panel = math.ceil(num_runs / args.num_cols)
-
     for idx_prompt in range(args.num_prompt):
         media_keys = f"eval/prompt_{idx_prompt}.mp4"
         blocks = [
@@ -58,7 +57,7 @@ def main():
                     wr.Runset(
                         entity=args.wandb_project_entity, 
                         project=args.wandb_project_name,
-                        filters={'displayName': {'$in': args.wandb_run_list}},)
+                        filters={'displayName': {'$in': args.wandb_run_list}} if args.wandb_run_list else None,) 
                 ],
             )
         ]
@@ -66,8 +65,30 @@ def main():
             report.blocks = blocks
         else:
             report.blocks = report.blocks + blocks
+
+    return report
+
+def main():    
+    if os.environ["WANDB_REPORT_API_ENABLE_V2"]:
+        print("WANDB_REPORT_API_ENABLE_V2 has to be empty for run filters to work")
+        sys.exit()
+
+    args = parse_arguments()
+
+    report = wr.Report(
+        project = args.wandb_project_name,
+        title = args.wandb_report_title,
+        entity = args.wandb_project_entity,
+        description = "",
+    )
+
+    if args.style == "prompt":
+        report = create_panel4prompt(args, report)
+    else:
+        "We haven't implemented other styles yet"
+        sys.exit()
+
     report.save()
 
- 
 if __name__ == "__main__":
     main()
