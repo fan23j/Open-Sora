@@ -174,7 +174,7 @@ def main():
     # 1. args & cfg
     # ======================================================
     cfg = parse_configs(training=False)
-    cfg.exp_name, cfg.exp_dir = create_experiment_workspace(cfg)
+    os.makedirs(cfg.exp_dir, exist_ok=True)
 
     # init distributed
     if os.environ.get("WORLD_SIZE", None):
@@ -211,6 +211,7 @@ def main():
     for path in path_ckpts:
         cfg.model["from_pretrained"] = path
         output_path = path.split("/")[-1]
+        print(output_path)
         run_eval(cfg, output_path, coordinator, device)
 
 
