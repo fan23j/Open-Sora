@@ -85,8 +85,15 @@ log_every = 10
 ckpt_every = 500
 load = None
 
+lr_schedule = "1cycle"
+anneal_strategy = "cos"
+warmup_steps = 1500
+cooldown_steps = 2500
+lr = 1e-5
+min_lr = 1e-7
+max_lr=1e-4
+
 batch_size = None
-lr = 1e-4
 grad_clip = 1.0
 
 eval_prompts = [

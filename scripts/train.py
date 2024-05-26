@@ -481,8 +481,12 @@ def main():
     if cfg.load is not None:
         lr_scheduler = None
     else:
-        #lr_scheduler = ConstantWarmupLR(optimizer, factor=1, warmup_steps=1500, last_epoch=-1)
-        lr_scheduler = OneCycleScheduler(optimizer, min_lr=1e-7, max_lr=1e-4, final_lr=1e-5, warmup_steps=1500, cooldown_steps=2500, anneal_strategy='cos')
+        if cfg.lr_schedule == "cosine_const":
+            lr_scheduler = ConstantWarmupLR(optimizer, factor=1, warmup_steps=cfg.warmup_steps, last_epoch=-1)
+        elif cfg.lr_schedule == "1cycle":
+            lr_scheduler = OneCycleScheduler(optimizer, min_lr=cfg.min_lr, max_lr=cfg.max_lr, final_lr=cfg.lr, warmup_steps=cfg.warmup_steps, cooldown_steps=cfg.cooldown_steps, anneal_strategy=cfg.anneal_strategy)
+        else:
+            lr_scheduler = None
     
     # 4.6. prepare for training
     if cfg.grad_checkpoint:
