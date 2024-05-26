@@ -46,7 +46,7 @@ def set_seed_custom(seed):
 def ensure_parent_directory_exists(file_path):
     directory_path = os.path.dirname(file_path)
     if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
+        os.makedirs(directory_path, exist_ok=True)
         print(f"Created directory: {directory_path}")
 
 z_log = None
