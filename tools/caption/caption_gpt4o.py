@@ -7,8 +7,7 @@ from io import BytesIO
 import requests
 import tqdm
 
-from opensora import VideoTextDataset
-from tools.caption.utils import PROMPTS
+from tools.caption.utils import PROMPTS, VideoTextDataset
 from tools.datasets.utils import IMG_EXTENSIONS, VID_EXTENSIONS
 
 
