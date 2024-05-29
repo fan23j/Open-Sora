@@ -68,7 +68,7 @@ def main(args):
 
     # Merge CSVs
     csvs_to_concat = glob.glob(str(root_meta / 'meta_clips_info_fmin1_aes_part*.csv'))
-    command = f"python -m tools.datasets.datautil {' '.join(csvs_to_concat)}/ --output {root_meta / 'meta_clips_info_fmin1_aes.csv'}"
+    command = f"python -m tools.datasets.datautil {' '.join(csvs_to_concat)} --output {root_meta / 'meta_clips_info_fmin1_aes.csv'}"
     check_status(command, "datautil aes merge")
 
     # Filter by aesthetic score
