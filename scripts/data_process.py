@@ -82,8 +82,9 @@ def main(args):
     if args.caption == 'gpt4':
         command = f"python -m tools.caption.caption_gpt4 {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key}"
         check_status(command, "caption_gpt4")
-    elif args.caption == 'gpt-4o':
+    elif args.caption == 'gpt4o':
         command = f"python -m tools.caption.caption_gpt4o {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key}"
+        print(command)
         check_status(command, "caption_gpt4o")
 
     command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_caption.csv'} --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
