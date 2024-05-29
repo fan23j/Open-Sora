@@ -347,6 +347,7 @@ vae, text_encoder, stdit, scheduler = build_models(
 
 def run_inference(mode, prompt_text, seed, cfg_scale, length):
     resolution = "360p"
+    # resolution = "480p"
     aspect_ratio = "9:16"
     # length = "2s"
     reference_image = None
@@ -557,7 +558,7 @@ def gradio_builder():
                     choices=["2s", "4s", "8s", "16s"],
                     value="2s",
                     label="Video Length (only effective for video generation)",
-                    info="8s may fail as Hugging Face ZeroGPU has the limitation of max 200 seconds inference time.",
+                    info="",
                 )
                 with gr.Row():
                     seed = gr.Slider(
