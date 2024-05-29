@@ -75,14 +75,38 @@ def main(args):
     command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_info_fmin1_aes.csv'} --aesmin 5"
     check_status(command, "datautil aesmin")
 
+    if args.caption is not None:
+        return
+
+    # Generate captions
+    if args.caption == 'gpt4':
+        command = f"python -m tools.caption.caption_gpt4 {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key}"
+        check_status(command, "caption_gpt4")
+    elif args.caption == 'gpt-4o':
+        command = f"python -m tools.caption.caption_gpt4o {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key}"
+        check_status(command, "caption_gpt4o")
+
+    command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_caption.csv'} --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
+    check_status(command, "datautil clean-caption")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process videos from a list of URLs.')
     parser.add_argument('--video-dir', type=str, help='Path to the directory of prepared videos.')
     parser.add_argument('--url-file', type=str, help='Path to the text file containing video URLs.')
     parser.add_argument('--output', type=str, help='Path to the output directory.', required=True)
+    parser.add_argument('--caption', choices=['gpt4', 'gpt4o'], default=None, help='Captioning model to use.')
+    parser.add_argument('--prompt', type=str, default='video-f3-detail-3ex', help='Prompt to use for captioning.')
+    parser.add_argument('--key', type=str, help='OpenAI API key.')
     args = parser.parse_args()
+
     if args.video_dir is None and args.url_file is None:
         print("Error: Please specify either --video-dir or --url-file.", file=sys.stderr)
         sys.exit(1)
-    # print(args)
+
+    if args.caption is not None and args.key is None:
+        print("Error: Please specify the OpenAI API key with --key.", file=sys.stderr)
+        sys.exit(1)
+
+
     main(args)
