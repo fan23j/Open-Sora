@@ -75,7 +75,7 @@ def main(args):
     command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_info_fmin1_aes.csv'} --aesmin 5"
     check_status(command, "datautil aesmin")
 
-    if args.caption is not None:
+    if args.caption is None:
         return
 
     # Generate captions
