@@ -15,7 +15,7 @@ def check_status(command, description):
         sys.exit(1)
 
 def download_videos(url_file, root_video):
-    command = f"yt-dlp -o '{root_video}/%(title)s-%(id)s.%(ext)s' -a {url_file}"
+    command = f"yt-dlp -f 'best[ext=mp4]' -o '{root_video}/%(title)s-%(id)s.%(ext)s' -a {url_file}"
     print(f"Downloading video from URL: {url_file}")
     check_status(command, f"download videos from {url_file}")
 
