@@ -4,7 +4,7 @@ import cv2
 from PIL import Image
 
 IMG_EXTENSIONS = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif", ".tiff", ".webp")
-VID_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv")
+VID_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm")
 
 
 def is_video(filename):
