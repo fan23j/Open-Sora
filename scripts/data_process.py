@@ -86,7 +86,7 @@ def main(args):
         command = f"python -m tools.caption.caption_par {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
         check_status(command, "caption_gpt4o")
 
-    command = f"python -m tools.datasets.datautil {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}_caption.csv'} --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
+    command = f"python -m tools.datasets.datautil {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}_caption.csv'} --video-info --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
     check_status(command, "datautil clean-caption")
 
 
