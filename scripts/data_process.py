@@ -72,7 +72,7 @@ def main(args):
     check_status(command, "datautil aes merge")
 
     # Filter by aesthetic score
-    command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_info_fmin1_aes.csv'} --aesmin 5"
+    command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_info_fmin1_aes.csv'} --aesmin {args.aes_score}"
     check_status(command, "datautil aesmin")
 
     if args.caption is None:
@@ -80,13 +80,13 @@ def main(args):
 
     # Generate captions
     if args.caption == 'gpt4':
-        command = f"python -m tools.caption.caption_par {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
+        command = f"python -m tools.caption.caption_par {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
         check_status(command, "caption_gpt4")
     elif args.caption == 'gpt4o':
-        command = f"python -m tools.caption.caption_par {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
+        command = f"python -m tools.caption.caption_par {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
         check_status(command, "caption_gpt4o")
 
-    command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0_caption.csv'} --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
+    command = f"python -m tools.datasets.datautil {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}_caption.csv'} --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
     check_status(command, "datautil clean-caption")
 
 
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('--prompt', type=str, default='video-f3-detail-3ex', help='Prompt to use for captioning.')
     parser.add_argument('--key', type=str, help='OpenAI API key.')
     parser.add_argument("--num-p", type=int, default=8, help="Number of parallelized OpenAI API requests")
+    parser.add_argument("--aes-score", type=float, default=5.0, help="Minimum aesthetic score for keeping a sample")
     args = parser.parse_args()
 
     if args.video_dir is None and args.url_file is None:
