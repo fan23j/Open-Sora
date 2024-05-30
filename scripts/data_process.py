@@ -44,7 +44,7 @@ def main(args):
     commands = [
         (f"python -m tools.datasets.convert video {root_video} --output {root_meta / 'meta.csv'}", "convert video"),
         (f"python -m tools.datasets.datautil {root_meta / 'meta.csv'} --info --fmin 1", "datautil info"),
-        (f"python -m tools.scene_cut.scene_detect {root_meta / 'meta_info_fmin1.csv'}", "scene_detect"),
+        (f"python -m tools.scene_cut.scene_detect {root_meta / 'meta_info_fmin1.csv'} --min-scene-len {args.min_scene_len}", "scene_detect"),
         (f"python -m tools.scene_cut.cut {root_meta / 'meta_info_fmin1_timestamp.csv'} --save_dir {root_clips}", "scene_cut cut"),
         (f"python -m tools.datasets.convert video {root_clips} --output {root_meta / 'meta_clips.csv'}", "convert clips"),
         (f"python -m tools.datasets.datautil {root_meta / 'meta_clips.csv'} --info --fmin 1", "datautil clips info")
@@ -86,7 +86,7 @@ def main(args):
         command = f"python -m tools.caption.caption_par {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
         check_status(command, "caption_gpt4o")
 
-    command = f"python -m tools.datasets.datautil {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}_caption.csv'} --video-info --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
+    command = f"python -m tools.datasets.datautil {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}_caption.csv'} --video-info --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / f'meta_clips_caption_cleaned{args.aes_score}.csv'}"
     check_status(command, "datautil clean-caption")
 
 
@@ -100,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--key', type=str, help='OpenAI API key.')
     parser.add_argument("--num-p", type=int, default=8, help="Number of parallelized OpenAI API requests")
     parser.add_argument("--aes-score", type=float, default=5.0, help="Minimum aesthetic score for keeping a sample")
+    parser.add_argument("--min-scene-len", type=int, default=90, help="Minimal number of frames for scenedetect")
     args = parser.parse_args()
 
     if args.video_dir is None and args.url_file is None:
