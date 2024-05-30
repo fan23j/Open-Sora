@@ -44,6 +44,42 @@ PROMPTS = {
         "text": "A video is given by providing three frames in chronological order. Some information about the image is '{}'. Describe this video and its style to generate a description. Pay attention to all objects in the video. Do not describe each frame individually. Do not reply with words like 'first frame'. The description should be useful for AI to re-generate the video. The description should be no more than six sentences. Here are some examples of good descriptions: 1. A stylish woman walks down a Tokyo street filled with warm glowing neon and animated city signage. She wears a black leather jacket, a long red dress, and black boots, and carries a black purse. She wears sunglasses and red lipstick. She walks confidently and casually. The street is damp and reflective, creating a mirror effect of the colorful lights. Many pedestrians walk about. 2. Several giant wooly mammoths approach treading through a snowy meadow, their long wooly fur lightly blows in the wind as they walk, snow covered trees and dramatic snow capped mountains in the distance, mid afternoon light with wispy clouds and a sun high in the distance creates a warm glow, the low camera view is stunning capturing the large furry mammal with beautiful photography, depth of field.",
         "type": "video",
     },
+    "image-lego": {
+        "text": """Describe this stop motion lego image and its style to generate a description.
+
+Do not use the term video or images or frames in the description.
+Do not use the word lego or stop motion animations in your descriptions. Always provide descriptions for lego stop motion images but do not use the word lego or mention that the world is blocky.
+
+Pay attention to all objects in the image. The description should be useful for AI to re-generate the image.
+
+The description should be less than six sentences. Here are some examples of good descriptions:
+1. A stylish person confidently and casually walks down a Tokyo street, which is filled with pedestrians and warm glowing neon and animated city signage. They wear a black leather jacket, a long red dress, black boots, and carries a black purse. The outfit is accented with striking red sunglasses and red lipstick. The street is damp and reflective, creating a mirror effect of the colorful lights.
+
+2. Several giant wooly mammoths tread through a snowy meadow, their long wooly fur lightly blows in the wind as they walk. Snow covered trees and dramatic snow capped mountains in the distance, mid afternoon light with wispy clouds and a sun high in the distance creates a warm glow. The low camera view, located in front of the mammoths, captures the large furry mammals with beautiful photography and dramatic depth of field.
+
+3. Drone view of blue waves crashing against the rugged cliffs along Big Sur's garay point beach. The crashes create white-tipped waves, while the golden light of the setting sun illuminates the rocky shore. A small island with a lighthouse sits in the distance, and green shrubbery covers the cliff's edge. The steep drop from the road down to the beach is a dramatic feat, with the cliff’s edges jutting out over the sea. This is a view that captures the raw beauty of the coast and the rugged landscape of the Pacific Coast Highway.""",
+        "type": "image",
+    },
+    "lego-video": {
+        "text": """A stop motion lego video is given by providing three frames in chronological order, each pulled frame from 20%, 50%, and 80% through the full video. Describe this video and its style to generate a description.
+
+If the three frames included do not give you enough context or information to describe the scene, say 'Not enough information'.
+If the three frames all appear identical, say 'Single image'.
+If the three frames depict very little movement, say 'No movement'.
+
+Do not use the term video or images or frames in the description. Do not describe each frame/image individually in the description.
+Do not use the word lego or stop motion animations in your descriptions. Always provide descriptions for lego stop motion videos but do not use the word lego or mention that the world is blocky.
+
+Pay attention to all objects in the video. The description should be useful for AI to re-generate the video.
+
+The description should be less than six sentences. Here are some examples of good descriptions:
+1. A stylish person confidently and casually walks down a Tokyo street, which is filled with pedestrians and warm glowing neon and animated city signage. They wear a black leather jacket, a long red dress, black boots, and carries a black purse. The outfit is accented with striking red sunglasses and red lipstick. The street is damp and reflective, creating a mirror effect of the colorful lights.
+
+2. Several giant wooly mammoths tread through a snowy meadow, their long wooly fur lightly blows in the wind as they walk. Snow covered trees and dramatic snow capped mountains in the distance, mid afternoon light with wispy clouds and a sun high in the distance creates a warm glow. The low camera view, located in front of the mammoths, captures the large furry mammals with beautiful photography and dramatic depth of field.
+
+3. Drone view of blue waves crashing against the rugged cliffs along Big Sur's garay point beach. The crashes create white-tipped waves, while the golden light of the setting sun illuminates the rocky shore. A small island with a lighthouse sits in the distance, and green shrubbery covers the cliff's edge. The steep drop from the road down to the beach is a dramatic feat, with the cliff’s edges jutting out over the sea. This is a view that captures the raw beauty of the coast and the rugged landscape of the Pacific Coast Highway.""",
+        "type": "video",
+    },
 }
 
 
