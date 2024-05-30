@@ -60,7 +60,7 @@ The description should be less than six sentences. Here are some examples of goo
 3. Drone view of blue waves crashing against the rugged cliffs along Big Sur's garay point beach. The crashes create white-tipped waves, while the golden light of the setting sun illuminates the rocky shore. A small island with a lighthouse sits in the distance, and green shrubbery covers the cliff's edge. The steep drop from the road down to the beach is a dramatic feat, with the cliff’s edges jutting out over the sea. This is a view that captures the raw beauty of the coast and the rugged landscape of the Pacific Coast Highway.""",
         "type": "image",
     },
-    "lego-video": {
+    "video-lego": {
         "text": """A stop motion lego video is given by providing three frames in chronological order, each pulled frame from 20%, 50%, and 80% through the full video. Describe this video and its style to generate a description.
 
 If the three frames included do not give you enough context or information to describe the scene, say 'Not enough information'.
