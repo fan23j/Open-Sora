@@ -80,10 +80,10 @@ def main(args):
 
     # Generate captions
     if args.caption == 'gpt4':
-        command = f"python -m tools.caption.caption_gpt4 {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key}"
+        command = f"python -m tools.caption.caption_par {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
         check_status(command, "caption_gpt4")
     elif args.caption == 'gpt4o':
-        command = f"python -m tools.caption.caption_gpt4o {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key}"
+        command = f"python -m tools.caption.caption_par {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0.csv'} --prompt {args.prompt} --key {args.key} --model {args.caption} --num-p {args.num_p}"
         check_status(command, "caption_gpt4o")
 
     command = f"python -m tools.datasets.datautil {root_meta / 'meta_clips_info_fmin1_aes_aesmin5.0_caption.csv'} --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / 'meta_clips_caption_cleaned.csv'}"
@@ -95,9 +95,10 @@ if __name__ == "__main__":
     parser.add_argument('--video-dir', type=str, help='Path to the directory of prepared videos.')
     parser.add_argument('--url-file', type=str, help='Path to the text file containing video URLs.')
     parser.add_argument('--output', type=str, help='Path to the output directory.', required=True)
-    parser.add_argument('--caption', choices=['gpt4', 'gpt4o'], default=None, help='Captioning model to use.')
+    parser.add_argument('--caption', choices=['gpt4', 'gpt4o'], default='gpt4o', help='Captioning model to use.')
     parser.add_argument('--prompt', type=str, default='video-f3-detail-3ex', help='Prompt to use for captioning.')
     parser.add_argument('--key', type=str, help='OpenAI API key.')
+    parser.add_argument("--num-p", type=int, default=8, help="Number of parallelized OpenAI API requests")
     args = parser.parse_args()
 
     if args.video_dir is None and args.url_file is None:
