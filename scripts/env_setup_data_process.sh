@@ -6,6 +6,9 @@ SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Get the parent directory of the script's directory
 OPEN_SORA_DIR="$(dirname "$SCRIPT_PATH")"
 
+# Get the pretrained weights for the aesthetic model
+wget https://github.com/christophschuhmann/improved-aesthetic-predictor/raw/main/sac+logos+ava1-l14-linearMSE.pth -O ${OPEN_SORA_DIR}/pretrained_models/aesthetic.pth
+
 python -m venv venv-data-process
 source venv-data-process/bin/activate
 pip install -e $OPEN_SORA_DIR
