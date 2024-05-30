@@ -1,0 +1,6 @@
+decord==0.6.0
+git+https://github.com/openai/CLIP.git
+imageio-ffmpeg==0.4.9
+scenedetect==0.6.3
+yt-dlp==2024.5.27
+pandas==2.2.2
