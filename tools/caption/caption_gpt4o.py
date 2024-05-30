@@ -17,10 +17,10 @@ def to_base64(image):
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
-def get_caption(frame, prompt, api_key):
+def get_caption(frame, prompt, api_key, model='gpt-4o', detail='low'):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     payload = {
-        "model": "gpt-4-vision-preview",
+        "model": model,
         "messages": [
             {
                 "role": "user",
@@ -29,9 +29,15 @@ def get_caption(frame, prompt, api_key):
                         "type": "text",
                         "text": prompt,
                     },
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame[0]}"}},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame[1]}"}},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame[2]}"}},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{frame[0]}",
+                        "detail": detail}},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{frame[1]}",
+                        "detail": detail}},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{frame[2]}",
+                        "detail": detail}},
                 ],
             }
         ],

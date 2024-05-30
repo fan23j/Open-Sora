@@ -6,9 +6,25 @@ from io import BytesIO
 
 import requests
 import tqdm
+import multiprocessing as mp
 
 from tools.caption.utils import PROMPTS, VideoTextDataset
 from tools.datasets.utils import IMG_EXTENSIONS, VID_EXTENSIONS
+
+
+MODELS = {
+    "gpt4": "gpt-4-vision-preview",
+    "gpt4o": "gpt-4o",
+}
+
+counter = None
+counter_lock = None
+
+def init(args_counter, args_counter_lock):
+    global counter
+    global counter_lock
+    counter = args_counter
+    counter_lock = args_counter_lock
 
 
 def to_base64(image):
@@ -17,10 +33,10 @@ def to_base64(image):
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
-def get_caption(frame, prompt, api_key):
+def get_caption(frame, prompt, api_key, model):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     payload = {
-        "model": "gpt-4-vision-preview",
+        "model": MODELS[model],
         "messages": [
             {
                 "role": "user",
@@ -42,6 +58,32 @@ def get_caption(frame, prompt, api_key):
     caption = caption.replace("\n", " ")
     return caption
 
+def process_sample(myargs):
+    sample, queue, num_samples, args = myargs
+    prompt = PROMPTS[args.prompt]["text"]
+    if "text" in args.prompt:
+        prompt = prompt.format(sample["text"])
+    frames = sample["image"]
+    frames = [to_base64(frame) for frame in frames]
+    try:
+        caption = get_caption(frames, prompt, args.key, args.model)
+        queue.put((sample["path"], caption))
+    except Exception:
+        queue.put((sample["path"], "Caption failed"))
+    with counter_lock:
+        counter.value += 1
+    print("\r" + f"{counter.value}/{num_samples}", end='', flush=True)
+
+def writer_process(queue, filename):
+    with open(filename, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["video", "text"])
+        while True:
+            data = queue.get()
+            if data == 'DONE':
+                break
+            writer.writerow(data)
+    f.close()
 
 def main(args):
     # ======================================================
@@ -49,9 +91,7 @@ def main(args):
     # ======================================================
     dataset = VideoTextDataset(args.input)
     output_file = os.path.splitext(args.input)[0] + "_caption.csv"
-    f = open(output_file, "w")
-    writer = csv.writer(f)
-    writer.writerow(["video", "text"])
+
 
     # make sure that the prompt type matches the data type
     data_extension = "." + dataset.data["path"].iloc[0].split(".")[-1]
@@ -67,19 +107,18 @@ def main(args):
     else:
         raise ValueError(f"Found invalid prompt type {prompt_type}")
 
-    # ======================================================
-    # 2. generate captions
-    # ======================================================
-    for sample in tqdm.tqdm(dataset):
-        prompt = PROMPTS[args.prompt]["text"]
-        if "text" in args.prompt:
-            prompt = prompt.format(sample["text"])
-        frames = sample["image"]
-        frames = [to_base64(frame) for frame in frames]
-        caption = get_caption(frames, prompt, args.key)
+    manager = mp.Manager()
+    counter = manager.Value('i', 0)
+    counter_lock = mp.Lock()
+    queue = manager.Queue()
+    num_samples = len(dataset)
 
-        writer.writerow((sample["path"], caption))
-    f.close()
+    with mp.Pool(processes=args.num_p, initializer=init, initargs=(counter, counter_lock)) as pool:
+        pool.apply_async(writer_process, (queue, output_file))
+        for _ in pool.imap_unordered(process_sample, [(sample, queue, num_samples, args) for sample in dataset]):
+            pass
+
+        queue.put('DONE')
 
 
 if __name__ == "__main__":
@@ -87,6 +126,8 @@ if __name__ == "__main__":
     parser.add_argument("input", type=str, help="Path to the input CSV file")
     parser.add_argument("--prompt", type=str, default="video-f3-detail-3ex")
     parser.add_argument("--key", type=str)
+    parser.add_argument("--num-p", type=int, default=8)
+    parser.add_argument("--model", type=str, choices=["gpt4", "gpt4o"], default="gpt4o")
     args = parser.parse_args()
 
     main(args)
