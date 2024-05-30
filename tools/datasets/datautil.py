@@ -74,10 +74,10 @@ def get_info(path):
 
 def get_video_info(path):
     try:
-        vframes, _, _ = torchvision.io.read_video(filename=path, pts_unit="sec", output_format="TCHW")
+        vframes, _, info = torchvision.io.read_video(filename=path, pts_unit="sec", output_format="TCHW")
         num_frames, height, width = vframes.shape[0], vframes.shape[2], vframes.shape[3]
         aspect_ratio = height / width
-        fps = np.nan
+        fps = info['video_fps']
         resolution = height * width
         return num_frames, height, width, aspect_ratio, fps, resolution
     except:
@@ -438,6 +438,8 @@ def main(args):
         assert "path" in data.columns
         data["text"] = apply(data["path"], load_caption, ext=args.load_caption)
     if args.info:
+        if "path" not in data.columns and "image" in data.columns:
+            data.rename(columns={"image": "path"}, inplace=True)
         info = apply(data["path"], get_info)
         (
             data["num_frames"],
@@ -448,6 +450,8 @@ def main(args):
             data["resolution"],
         ) = zip(*info)
     if args.video_info:
+        if "path" not in data.columns and "video" in data.columns:
+            data.rename(columns={"video": "path"}, inplace=True)
         info = apply(data["path"], get_video_info)
         (
             data["num_frames"],
