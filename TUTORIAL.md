@@ -66,7 +66,21 @@ To use our demo dataset:
 2. Verify that the paths match the demo-csv file for this dataset named `Open-Sora/brick_clips.csv` and are accessible from within the `Open-Sora` folder.
 
 To prepare your own dataset:
-TBA
+1. Setup a Python virtual envrionment using the following script.
+    ```bash
+    ./scripts/env_setup_data_process.sh
+    ```
+2. Prepare a `video_urls.txt` file of list of YouTube video links, and run the following data process script.
+   ```bash
+    python -m scripts.data_process \
+    --output /path/where/new/dataset/will/be/created \
+    --url-file /path/to/video_urls.txt  \
+    --video-dir /path/to/some/videos \
+    --prompt video \
+    --caption gpt4o \ 
+    --num-p 8 \
+    --key [OPENAI_API_KEY]
+   ```
 
 
 ## Train the Model
