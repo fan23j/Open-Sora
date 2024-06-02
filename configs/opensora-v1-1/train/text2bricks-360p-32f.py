@@ -3,7 +3,7 @@ dataset = dict(
     type="VariableVideoTextDataset",
     data_path=None,
     num_frames=None,
-    frame_interval=2,
+    frame_interval=4,
     image_size=(None, None),
     transform_name="resize_crop",
 )

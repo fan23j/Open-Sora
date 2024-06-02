@@ -84,14 +84,45 @@ To prepare your own dataset:
 
 
 ## Train the Model
-TBA
+
+
+
+```
+# For lambdalabs/text2bricks-360p-32f
+
+OMP_NUM_THREADS=52 colossalai run --nproc_per_node 8 \
+--hostfile $HOSTFILE \
+--master_addr $MASTER_ADDR \
+scripts/train.py \
+configs/opensora-v1-1/train/text2bricks-360p-32f.py \
+--data-path /path/where/dataset/csv/is/located \
+--ckpt-path /path/to/OpenSora-STDiT-v2-stage3/model.safetensors
+
+# For lambdalabs/text2bricks-360p-64f
+
+OMP_NUM_THREADS=52 colossalai run --nproc_per_node 8 \
+--hostfile $HOSTFILE \
+--master_addr $MASTER_ADDR \
+scripts/train.py \
+configs/opensora-v1-1/train/text2bricks-360p-64f.py \
+--data-path /path/where/dataset/csv/is/located \
+--ckpt-path /path/to/OpenSora-STDiT-v2-stage3/model.safetensors
+```
 
 
 ## Running Inference
-Once the model is trained, the checkpoints are saved to `outputs/[EXPNAME]/epoch[EPOCH]_step[STEP]/model/`.
-To load our gradio demo for a specific checkpoint:
-TBA
 
+```
+python scripts/inference.py \
+configs/opensora-v1-1/inference/text2bricks-360p-32f.py \
+--prompt "A young man walks alone by the seaside." \
+--num-frames 32
+
+python scripts/inference.py \
+configs/opensora-v1-1/inference/text2bricks-360p-64f.py \
+--prompt "A young man walks alone by the seaside." \
+--num-frames 64
+```
 
 ---
 
