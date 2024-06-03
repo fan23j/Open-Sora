@@ -555,8 +555,9 @@ def gradio_builder():
                     lines=4,
                 )
                 length = gr.Radio(
-                    choices=["2s", "4s", "8s", "16s"],
-                    value="2s",
+                    # choices=["2s", "4s", "8s", "16s"],
+                    choices=["4s"],
+                    value="4s",
                     label="Video Length (only effective for video generation)",
                     info="",
                 )
@@ -582,23 +583,29 @@ def gradio_builder():
                 ex = gr.Examples(
                     [
                         [
-                            "A teenage boy in a red puffer vest stands beside a futuristic, silver DeLorean car with its gull-wing doors open, as lightning strikes a clock tower in the background.",
+                            "A young man walks alone by the seaside.",
                             1024,
                             7,
-                            "2s",
+                            "4s",
+                        ],                         
+                        [
+                            "An intense scene from 'Game of Thrones,' featuring Jon Snow standing on the Wall, gazing out at the frozen landscape beyond. The image captures detailed textures of his fur-lined cloak, the icy environment, and his determined expression, with dramatic, atmospheric lighting.",
+                            1024,
+                            7,
+                            "4s",
                         ],
                         [
-                            "Jack Nicholson breaking through the door with a axe and shouting 'Here's Johnny!'",
+                            "A powerful scene from 'The Godfather,' featuring Don Vito Corleone in his dimly lit office, speaking to an associate. The image is intense with warm, subdued lighting and rich textures.",
                             1024,
                             7,
-                            "2s",
+                            "4s",
                         ],
                         [
-                            "Alien - Ellen Ripley, in a spacesuit, confronting the Alien in the spaceship's airlock.",
+                            "A stunning scene from 'Back to the Future,' showing Marty McFly and Doc Brown. A silver DeLorean. Lightnings strike into the old clock tower.",
                             1024,
                             7,
-                            "2s",
-                        ],
+                            "4s",
+                        ],           
                     ],
                     inputs=[prompt_text, seed, cfg_scale, length],
                     outputs=output_video,
