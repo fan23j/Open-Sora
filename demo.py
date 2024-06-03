@@ -555,8 +555,7 @@ def gradio_builder():
                     lines=4,
                 )
                 length = gr.Radio(
-                    # choices=["2s", "4s", "8s", "16s"],
-                    choices=["4s"],
+                    choices=["2s", "4s"],
                     value="4s",
                     label="Video Length (only effective for video generation)",
                     info="",
@@ -619,10 +618,10 @@ def gradio_builder():
                     """
                 <div style="text-align: center; max-width: 650px; margin: 0 auto;">
                   <p style="margin-bottom: 10px; font-size: 94%">
-                  If you want to find out how we made this model read about it in <a href="https://wandb.ai/lambdalabs/lego/reports/Text2Bricks-Finetuning-OpenSora-with-1-000-GPU-Hours--Vmlldzo4MDE3MTky">this blog post</a>.
+                  If you want to find out how we made this model read about it in <a href="https://api.wandb.ai/links/lambdalabs/d71480sb">this blog post</a>.
                   </p>
                   <p style="margin-bottom: 10px; font-size: 94%">
-                  And if you want to train your own text2bricks variants, see our <a href="https://github.com/LambdaLabsML/Open-Sora/blob/lambda_bricks/TUTORIAL.md">customized fork</a>!
+                  And if you want to train your own text2bricks variants, see our <a href="https://github.com/LambdaLabsML/Open-Sora/blob/lambda_bricks/README.md">customized fork</a>!
                   </p>
                 </div>
                 """
