@@ -85,7 +85,7 @@ The full dataset is available on [Huggingface](https://huggingface.co/datasets/l
     --output /path/where/new/dataset/will/be/created \
     --url-file /path/to/video_urls.txt  \
     --video-dir /path/to/some/videos \
-    --prompt video \
+    --prompt video-lego \
     --caption gpt4o \ 
     --num-p 8 \
     --key [OPENAI_API_KEY]
