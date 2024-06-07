@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+import pandas as pd
 
 
 def check_status(command, description):
@@ -25,11 +26,13 @@ def main(args):
     root_video = root_dir / 'video'
     root_clips = root_dir / 'clips'
     root_meta = root_dir / 'meta'
+    root_aio = root_dir / 'aio'
 
     # Create subdirectories
     root_video.mkdir(parents=True, exist_ok=True)
     root_clips.mkdir(parents=True, exist_ok=True)
     root_meta.mkdir(parents=True, exist_ok=True)
+    root_aio.mkdir(parents=True, exist_ok=True)
 
     if args.video_dir is not None:
         # Prepare videos
@@ -89,6 +92,12 @@ def main(args):
     command = f"python -m tools.datasets.datautil {root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}_caption.csv'} --video-info --clean-caption --refine-llm-caption --remove-empty-caption --output {root_meta / f'meta_clips_caption_cleaned{args.aes_score}.csv'}"
     check_status(command, "datautil clean-caption")
 
+    # Add aes to meta_clips_caption_cleaned{args.aes_score}.csv
+    # source of score is meta_clips_info_fmin1_aes_aesmin{args.aes_score}.csv
+    a_df = pd.read_csv(root_meta / f'meta_clips_caption_cleaned{args.aes_score}.csv')
+    b_df = pd.read_csv(root_meta / f'meta_clips_info_fmin1_aes_aesmin{args.aes_score}.csv')
+    merged_df = pd.merge(a_df, b_df[['path', 'aes']], on='path', how='left')
+    merged_df.to_csv(root_aio / f'meta_aio.csv', index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process videos from a list of URLs.')
