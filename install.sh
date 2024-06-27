@@ -41,11 +41,13 @@ conda create -y --name "$ENV_NAME" "$PYTHON_VER"
 conda activate "$ENV_NAME"
 
 # Install NVIDIA toolkit with CUDA 12.1
-conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-toolkit
-conda install -n $ENV_NAME conda-forge::cudnn
-conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-nvcc
-conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-nvprof
-conda install -n $ENV_NAME -c nvidia cuda-profiler-api
+conda config --add channels nvidia/label/cuda-12.1.1
+conda config --set channel_priority strict
+
+conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-toolkit=12.1.1
+conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-nvcc=12.1.105
+conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-nvprof=12.1.105
+conda install -n $ENV_NAME nvidia/label/cuda-12.1.1::cuda-profiler-api=12.1.105
 set_cuda_home
 
 # Install PyTorch for CUDA 12.1
