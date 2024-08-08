@@ -156,13 +156,13 @@ class Attention(nn.Module):
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
-
         self.rope = False
         if rope is not None:
             self.rope = True
             self.rotary_emb = rope
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+
         B, N, C = x.shape
         # flash attn is not memory efficient for small sequences, this is empirical
         enable_flash_attn = self.enable_flash_attn and (N > B)
@@ -207,6 +207,7 @@ class Attention(nn.Module):
         x = x.reshape(x_output_shape)
         x = self.proj(x)
         x = self.proj_drop(x)
+
         return x
 
 

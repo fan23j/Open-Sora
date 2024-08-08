@@ -7,6 +7,7 @@ from opensora.registry import SCHEDULERS
 from . import gaussian_diffusion as gd
 from .respace import SpacedDiffusion, space_timesteps
 from .speed import SpeeDiffusion
+from opensora.utils.train_utils import get_text_encodings
 
 
 @SCHEDULERS.register_module("iddpm")
@@ -65,8 +66,11 @@ class IDDPM(SpacedDiffusion):
     ):
         n = len(prompts)
         z = torch.cat([z, z], 0)
+        #model_args = torch.load("model_args.pth")
+        #model_args = get_text_encodings(prompts,model_args,is_train=False)
         model_args = text_encoder.encode(prompts)
         y_null = text_encoder.null(n)
+       
         model_args["y"] = torch.cat([model_args["y"], y_null], 0)
         if additional_args is not None:
             model_args.update(additional_args)

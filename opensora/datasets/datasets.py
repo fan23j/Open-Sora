@@ -132,10 +132,13 @@ class VariableVideoTextDataset(VideoTextDataset):
         text = sample["text"]
         file_type = self.get_type(path)
         ar = height / width
-
+    
         video_fps = 24  # default fps
         if file_type == "video":
             # loading
+            # path = f'data/brick_clips/{path}'
+            path = f'/mnt/mir/fan23j/data/nba-plus-statvu-dataset/filtered-clips/{path}'
+            #path = f'/mnt/meg/shahroz/Open-Sora/{path}'
             vframes, _, infos = torchvision.io.read_video(filename=path, pts_unit="sec", output_format="TCHW")
             if "video_fps" in infos:
                 video_fps = infos["video_fps"]

@@ -92,7 +92,11 @@ eval_prompts = [
         "A ninja wearing a red outfit jumps from one roof of a building to a second building's roof. The full moon is in sight directly behind the ninja.",
         "A newly married couple do their first dance at a wedding. Both partners are wearing white dresses, and are slow dancing in the center of a beautifully decorated wedding hall.",
         "A fat rabbit wearing a purple robe walking through a fantasy landscape",
-        "A young man walks alone by the seaside",            
+        "A young man walks alone by the seaside",
+        "A basketball player shooting free throws.",
+        "A basketball player getting fouled while driving to the basket.",
+        "A basketball player making a half-court shot.",
+        "A baskebtall player missing a step-back jumper.",           
 ]
 
 eval_image_size = (360, 640)
@@ -104,4 +108,4 @@ eval_steps = ckpt_every
 wandb_project_name = "text2bricks-360p-32f"
 wandb_project_entity = None
 
-exp_id = "text2bricks-360p-32f"
+exp_id = "basketball-360p-32f-scratch"

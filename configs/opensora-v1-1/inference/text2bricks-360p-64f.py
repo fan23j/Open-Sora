@@ -1,10 +1,12 @@
-num_frames = 32
+num_frames = 64
 frame_interval = 1
 fps = 8
 image_size = (360, 640)
 multi_resolution = "STDiT2"
 
-# Define model
+
+
+# Define models
 model = dict(
     type="STDiT2-XL/2",
     from_pretrained="lambdalabs/text2bricks-360p-64f",
@@ -38,6 +40,6 @@ prompt_path = "./assets/texts/t2v_samples.txt"
 prompt = None  # prompt has higher priority than prompt_path
 
 # Others
-batch_size = 1
+batch_size = 4
 seed = 42
 save_dir = "./samples/text2bricks-360p-64f/"

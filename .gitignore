@@ -176,6 +176,11 @@ pretrained_models/
 evaluation_results/
 cache/
 *.swp
+pretrained/
+ColossalAI/
+apex/
+model_args.pth
+text_latents.pth
 
 # Secret files
 hostfile

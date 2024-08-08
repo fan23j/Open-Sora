@@ -61,10 +61,13 @@ def main():
         MODELS,
         input_size=latent_size,
         in_channels=vae.out_channels,
-        caption_channels=text_encoder.output_dim,
-        model_max_length=text_encoder.model_max_length,
+        # caption_channels=text_encoder.output_dim,
+        # model_max_length=text_encoder.model_max_length,
+        caption_channels=4096,
+        model_max_length=200,
         enable_sequence_parallelism=enable_sequence_parallelism,
     )
+
     text_encoder.y_embedder = model.y_embedder  # hack for classifier-free guidance
 
     # 3.2. move to device & eval
@@ -145,6 +148,7 @@ def main():
 
             # sampling
             z = torch.randn(len(batch_prompts), vae.out_channels, *latent_size, device=device, dtype=dtype)
+
             samples = scheduler.sample(
                 model,
                 text_encoder,

@@ -1,8 +1,61 @@
 import math
 import random
 from collections import OrderedDict
-
+from typing import List, Dict
 import torch
+from colossalai.utils import get_current_device
+
+action_classes = [
+    "a basketball player missing a three-point shot",
+    "a basketball player assisting on a play",
+    "a basketball player setting a screen",
+    "a basketball player grabbing a rebound",
+    "a basketball player committing a turnover",
+    "a basketball player making a free throw",
+    "a basketball player missing a free throw",
+    "a basketball player scoring and being fouled",
+    "a basketball player missing a two-point shot",
+    "a basketball player making a two-point shot",
+    "a basketball player committing a foul",
+    "a basketball player executing a pick and roll",
+    "a basketball player posting up",
+    "a basketball player stealing the ball",
+    "a basketball player receiving a technical foul",
+    "a basketball player making a three-point shot",
+    "a basketball player committing their second foul",
+    "a basketball player committing their third foul",
+    "a basketball player committing an unsportsmanlike foul",
+    "a basketball player making a three-pointer and being fouled",
+    "a basketball player getting a second chance opportunity",
+    "a basketball player making two free throws",
+    "a basketball player missing two free throws",
+    "a basketball player making three free throws",
+    "a basketball player missing three free throws",
+    "a basketball player committing a disqualifying foul"
+]
+
+description_to_index = {desc: idx for idx, desc in enumerate(action_classes)}
+
+def get_text_encodings(
+    prompts: List[str],
+    model_args: Dict[str, torch.Tensor],
+    is_train: bool = True
+):
+    device = get_current_device()
+    indices = [description_to_index[desc] for desc in prompts if desc in description_to_index]
+    y_filtered = model_args["y"][indices]
+    mask_filtered = model_args["mask"][indices]
+    
+    if not is_train:
+        null_encodings = model_args["y"][26:26 + len(prompts)]
+        y_filtered = torch.cat([y_filtered, null_encodings], dim=0)
+
+    filtered_model_args = {
+        "y": y_filtered.to(device),
+        "mask": mask_filtered.to(device)
+    }
+    
+    return filtered_model_args
 
 
 @torch.no_grad()
@@ -10,7 +63,7 @@ def update_ema(
     ema_model: torch.nn.Module, model: torch.nn.Module, optimizer=None, decay: float = 0.9999, sharded: bool = True
 ) -> None:
     """
-    Step the EMA model towards the current model.
+    Step the EMa model towards the current model.
     """
     ema_params = OrderedDict(ema_model.named_parameters())
     model_params = OrderedDict(model.named_parameters())
@@ -26,7 +79,8 @@ def update_ema(
         else:
             if param.data.dtype != torch.float32:
                 param_id = id(param)
-                master_param = optimizer._param_store.working_to_master_param[param_id]
+                master_param = optimizer.working_to_master_param[param_id]
+                #master_param = optimizer._param_group.working_to_master_param[param_id]
                 param_data = master_param.data
             else:
                 param_data = param.data

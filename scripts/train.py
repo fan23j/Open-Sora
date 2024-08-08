@@ -22,6 +22,7 @@ from opensora.acceleration.parallel_states import (
     set_data_parallel_group,
     set_sequence_parallel_group,
 )
+from opensora.models.text_encoder.t5 import text_preprocessing
 from opensora.acceleration.plugin import ZeroSeqParallelPlugin
 from opensora.datasets import prepare_dataloader, prepare_variable_dataloader, save_sample
 from opensora.registry import DATASETS, MODELS, SCHEDULERS, build_module
@@ -33,7 +34,7 @@ from opensora.utils.config_utils import (
     save_training_config,
 )
 from opensora.utils.misc import all_reduce_mean, format_numel_str, get_model_numel, requires_grad, to_torch_dtype
-from opensora.utils.train_utils import MaskGenerator, update_ema
+from opensora.utils.train_utils import MaskGenerator, update_ema, get_text_encodings
 
 
 from torch.optim.lr_scheduler import LRScheduler as _LRScheduler
@@ -221,6 +222,7 @@ def ensure_parent_directory_exists(file_path):
 
 z_log = None
 def write_sample(model, text_encoder, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype, device):
+    #prompts = [text_preprocessing(prompt) for prompt in cfg.eval_prompts[dist.get_rank()::dist.get_world_size()]]
     prompts = cfg.eval_prompts[dist.get_rank()::dist.get_world_size()]
     if prompts:
         global z_log   
@@ -442,6 +444,7 @@ def main():
     # ======================================================
     # 4.1. build model
     text_encoder = build_module(cfg.text_encoder, MODELS, device=device)
+    #text_encoder = None
     vae = build_module(cfg.vae, MODELS)
     input_size = (dataset.num_frames, *dataset.image_size)
     latent_size = vae.get_latent_size(input_size)
@@ -450,8 +453,10 @@ def main():
         MODELS,
         input_size=latent_size,
         in_channels=vae.out_channels,
-        caption_channels=text_encoder.output_dim,
-        model_max_length=text_encoder.model_max_length
+        # caption_channels=text_encoder.output_dim,
+        # model_max_length=text_encoder.model_max_length
+        caption_channels=4096,
+        model_max_length=200
     )
     model_numel, model_numel_trainable = get_model_numel(model)
     logger.info(
@@ -501,6 +506,7 @@ def main():
     # 5. boost model for distributed training with colossalai
     # =======================================================
     torch.set_default_dtype(dtype)
+
     model, optimizer, _, dataloader, lr_scheduler = booster.boost(
         model=model,
         optimizer=optimizer,
@@ -550,10 +556,10 @@ def main():
     # log prompts for pre-training ckpt
     first_global_step = start_epoch * num_steps_per_epoch + start_step
 
-    write_sample(model, text_encoder, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
-    log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
+    #write_sample(model, text_encoder, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
+    #log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
     
-
+    #cache_model_args = torch.load("model_args.pth")
     # 6.2. training loop
     for epoch in range(start_epoch, cfg.epochs):
         if cfg.dataset.type == "VideoTextDataset":
@@ -573,12 +579,16 @@ def main():
                 start_time = time.time()
                 x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
                 y = batch.pop("text")
+                #y = [text_preprocessing(prompt) for prompt in batch.pop("text")]
                 # Visual and text encoding
                 with torch.no_grad():
                     # Prepare visual inputs
                     x = vae.encode(x)  # [B, C, T, H/P, W/P]
                     # Prepare text inputs
                     model_args = text_encoder.encode(y)
+                    # model_args = cache_model_args
+                    # model_args = get_text_encodings(y, model_args)
+
 
                 # Mask
                 if cfg.mask_ratios is not None:
@@ -593,6 +603,7 @@ def main():
 
                 # Diffusion
                 t = torch.randint(0, scheduler.num_timesteps, (x.shape[0],), device=device)
+
                 loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
 
                 # Backward & update
