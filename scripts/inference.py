@@ -5,10 +5,9 @@ import torch
 import torch.distributed as dist
 from colossalai.cluster import DistCoordinator
 from mmengine.runner import set_random_seed
-
+from opensora.models.text_encoder.t5 import text_preprocessing
 from opensora.acceleration.parallel_states import set_sequence_parallel_group
 from opensora.datasets import IMG_FPS, save_sample
-from opensora.models.text_encoder.t5 import text_preprocessing
 from opensora.registry import MODELS, SCHEDULERS, build_module
 from opensora.utils.config_utils import parse_configs
 from opensora.utils.misc import to_torch_dtype
@@ -54,18 +53,16 @@ def main():
     input_size = (cfg.num_frames, *cfg.image_size)
     vae = build_module(cfg.vae, MODELS)
     latent_size = vae.get_latent_size(input_size)
-    text_encoder = build_module(cfg.text_encoder, MODELS, device=device)  # T5 must be fp32
 
     model = build_module(
         cfg.model,
         MODELS,
         input_size=latent_size,
         in_channels=vae.out_channels,
-        caption_channels=text_encoder.output_dim,
-        model_max_length=text_encoder.model_max_length,
+        caption_channels=4096,
+        model_max_length=200,
         enable_sequence_parallelism=enable_sequence_parallelism,
     )
-    text_encoder.y_embedder = model.y_embedder  # hack for classifier-free guidance
 
     # 3.2. move to device & eval
     vae = vae.to(device, dtype).eval()
@@ -147,7 +144,6 @@ def main():
             z = torch.randn(len(batch_prompts), vae.out_channels, *latent_size, device=device, dtype=dtype)
             samples = scheduler.sample(
                 model,
-                text_encoder,
                 z=z,
                 prompts=batch_prompts,
                 device=device,

@@ -220,7 +220,7 @@ def ensure_parent_directory_exists(file_path):
 
 
 z_log = None
-def write_sample(model, text_encoder, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype, device):
+def write_sample(model, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype, device):
     prompts = cfg.eval_prompts[dist.get_rank()::dist.get_world_size()]
     if prompts:
         global z_log   
@@ -229,9 +229,7 @@ def write_sample(model, text_encoder, vae, scheduler, cfg, epoch, exp_dir, globa
         back_to_train_vae = vae.training
         vae = vae.eval()
         model = model.eval()
-        text_encoder.y_embedder = (
-            model.module.y_embedder
-        )  # hack for classifier-free guidance
+
         save_dir = os.path.join(
             exp_dir, f"epoch{epoch}-global_step{global_step + 1}"
         )
@@ -257,7 +255,6 @@ def write_sample(model, text_encoder, vae, scheduler, cfg, epoch, exp_dir, globa
                 batch_z = z[i:i + eval_batch_size]
                 batch_samples = scheduler.sample(
                     model,
-                    text_encoder,
                     z=batch_z,
                     prompts=batch_prompts,
                     device=device,
@@ -292,7 +289,6 @@ def write_sample(model, text_encoder, vae, scheduler, cfg, epoch, exp_dir, globa
             model = model.train()
         if back_to_train_vae:
             vae = vae.train()
-        text_encoder.y_embedder = None
 
         load_rng_state(rng_state)
 
@@ -377,7 +373,7 @@ def main():
         logger = create_logger(None)
     else:
         print("Training configuration:")
-        pprint(cfg._cfg_dict)
+        print(cfg._cfg_dict)
         logger = create_logger(exp_dir)
         logger.info(f"Experiment directory created at {exp_dir}")
 
@@ -441,7 +437,6 @@ def main():
     # 4. build model
     # ======================================================
     # 4.1. build model
-    text_encoder = build_module(cfg.text_encoder, MODELS, device=device)
     vae = build_module(cfg.vae, MODELS)
     input_size = (dataset.num_frames, *dataset.image_size)
     latent_size = vae.get_latent_size(input_size)
@@ -450,8 +445,8 @@ def main():
         MODELS,
         input_size=latent_size,
         in_channels=vae.out_channels,
-        caption_channels=text_encoder.output_dim,
-        model_max_length=text_encoder.model_max_length
+        caption_channels=4096,
+        model_max_length=200,
     )
     model_numel, model_numel_trainable = get_model_numel(model)
     logger.info(
@@ -550,7 +545,7 @@ def main():
     # log prompts for pre-training ckpt
     first_global_step = start_epoch * num_steps_per_epoch + start_step
 
-    write_sample(model, text_encoder, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
+    write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
     log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
     
 
@@ -577,8 +572,6 @@ def main():
                 with torch.no_grad():
                     # Prepare visual inputs
                     x = vae.encode(x)  # [B, C, T, H/P, W/P]
-                    # Prepare text inputs
-                    model_args = text_encoder.encode(y)
 
                 # Mask
                 if cfg.mask_ratios is not None:
@@ -664,7 +657,7 @@ def main():
 
                     # log prompts for each checkpoints
                 if global_step % cfg.eval_steps == 0:
-                    write_sample(model, text_encoder, vae, scheduler_inference, cfg, epoch, exp_dir, global_step, dtype, device)
+                    write_sample(model, vae, scheduler_inference, cfg, epoch, exp_dir, global_step, dtype, device)
                     log_sample(coordinator.is_master(), cfg, epoch, exp_dir, global_step)
 
         # the continue epochs are not resumed, so we need to reset the sampler start index and start step

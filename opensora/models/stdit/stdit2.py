@@ -57,7 +57,7 @@ class STDiT2Block(nn.Module):
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
         # cross attn
-        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
+        #self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # mlp branch
         self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
@@ -88,7 +88,7 @@ class STDiT2Block(nn.Module):
         x = rearrange(x, "B T S C -> B (T S) C")
         return x
 
-    def forward(self, x, y, t, t_tmp, mask=None, x_mask=None, t0=None, t0_tmp=None, T=None, S=None):
+    def forward(self, x, t, t_tmp, mask=None, x_mask=None, t0=None, t0_tmp=None, T=None, S=None):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
@@ -110,7 +110,7 @@ class STDiT2Block(nn.Module):
         if x_mask is not None:
             x_m_zero = t2i_modulate(self.norm1(x), shift_msa_zero, scale_msa_zero)
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
-
+        import pudb; pudb.set_trace()
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
         x_s = self.attn(x_s)
@@ -142,7 +142,7 @@ class STDiT2Block(nn.Module):
         x = x + self.drop_path(x_t)
 
         # cross attn
-        x = x + self.cross_attn(x, y, mask)
+        #x = x + self.cross_attn(x, y, mask)
 
         # modulate
         x_m = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -299,14 +299,13 @@ class STDiT2(PreTrainedModel):
         return (T, H, W)
 
     def forward(
-        self, x, timestep, y, mask=None, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None
+        self, x, timestep, mask=None, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None
     ):
         """
         Forward pass of STDiT.
         Args:
             x (torch.Tensor): latent representation of video; of shape [B, C, T, H, W]
             timestep (torch.Tensor): diffusion time steps; of shape [B]
-            y (torch.Tensor): representation of prompts; of shape [B, 1, N_token, C]
             mask (torch.Tensor): mask for selecting prompt tokens; of shape [B, N_token]
 
         Returns:
@@ -316,7 +315,6 @@ class STDiT2(PreTrainedModel):
         dtype = self.x_embedder.proj.weight.dtype
         x = x.to(dtype)
         timestep = timestep.to(dtype)
-        y = y.to(dtype)
 
         # === process data info ===
         # 1. get dynamic size
@@ -368,28 +366,13 @@ class STDiT2(PreTrainedModel):
             t0_spc_mlp = None
             t0_tmp_mlp = None
 
-        # prepare y
-        y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
-
-        if mask is not None:
-            if mask.shape[0] != y.shape[0]:
-                mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
-            mask = mask.squeeze(1).squeeze(1)
-            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
-            y_lens = mask.sum(dim=1).tolist()
-        else:
-            y_lens = [y.shape[2]] * y.shape[0]
-            y = y.squeeze(1).view(1, -1, x.shape[-1])
-
         # blocks
         for _, block in enumerate(self.blocks):
             x = auto_grad_checkpoint(
                 block,
                 x,
-                y,
                 t_spc_mlp,
                 t_tmp_mlp,
-                y_lens,
                 x_mask,
                 t0_spc_mlp,
                 t0_tmp_mlp,
@@ -492,9 +475,9 @@ class STDiT2(PreTrainedModel):
         nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
 
         # Zero-out adaLN modulation layers in PixArt blocks:
-        for block in self.blocks:
-            nn.init.constant_(block.cross_attn.proj.weight, 0)
-            nn.init.constant_(block.cross_attn.proj.bias, 0)
+        # for block in self.blocks:
+        #     nn.init.constant_(block.cross_attn.proj.weight, 0)
+        #     nn.init.constant_(block.cross_attn.proj.bias, 0)
 
         # Zero-out output layers:
         nn.init.constant_(self.final_layer.linear.weight, 0)
