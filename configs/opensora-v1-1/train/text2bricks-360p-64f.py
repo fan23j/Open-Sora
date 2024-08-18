@@ -45,13 +45,13 @@ vae = dict(
     micro_batch_size=4,
     local_files_only=True,
 )
-text_encoder = dict(
-    type="t5",
-    from_pretrained="DeepFloyd/t5-v1_1-xxl",
-    model_max_length=200,
-    shardformer=True,
-    local_files_only=True,
-)
+# text_encoder = dict(
+#     type="t5",
+#     from_pretrained="DeepFloyd/t5-v1_1-xxl",
+#     model_max_length=200,
+#     shardformer=True,
+#     local_files_only=True,
+# )
 scheduler = dict(
     type="iddpm",
     timestep_respacing="",
@@ -66,7 +66,7 @@ scheduler_inference = dict(
 # Others
 seed = 42
 outputs = "outputs"
-wandb = True
+wandb = False
 
 epochs = 1000
 log_every = 10
