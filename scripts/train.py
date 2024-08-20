@@ -570,6 +570,7 @@ def main():
                 y = batch.pop("text")
                 # Visual and text encoding
                 with torch.no_grad():
+                    model_args = dict()
                     # Prepare visual inputs
                     x = vae.encode(x)  # [B, C, T, H/P, W/P]
 

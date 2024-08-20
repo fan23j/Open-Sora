@@ -86,7 +86,6 @@ class IDDPM(SpacedDiffusion):
 def forward_with_cfg(model, x, timestep, cfg_scale, cfg_channel=None, **kwargs):
     # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
     half = x[: len(x) // 2]
-    import pudb; pudb.set_trace()
     combined = torch.cat([half, half], dim=0)
     if "x_mask" in kwargs and kwargs["x_mask"] is not None:
         if len(kwargs["x_mask"]) != len(x):

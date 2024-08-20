@@ -88,7 +88,7 @@ class STDiT2Block(nn.Module):
         x = rearrange(x, "B T S C -> B (T S) C")
         return x
 
-    def forward(self, x, t, t_tmp, mask=None, x_mask=None, t0=None, t0_tmp=None, T=None, S=None):
+    def forward(self, x, t, t_tmp, x_mask=None, t0=None, t0_tmp=None, T=None, S=None, mask=None):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
@@ -110,7 +110,7 @@ class STDiT2Block(nn.Module):
         if x_mask is not None:
             x_m_zero = t2i_modulate(self.norm1(x), shift_msa_zero, scale_msa_zero)
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
-        import pudb; pudb.set_trace()
+
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
         x_s = self.attn(x_s)
