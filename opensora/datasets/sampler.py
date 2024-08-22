@@ -14,19 +14,19 @@ from .datasets import VariableVideoTextDataset
 
 # HACK: use pandarallel
 # pandarallel should only access local variables
+# def apply(data, method=None, frame_interval=None, seed=None, num_bucket=None):
+#     return method(
+#         len(data['frames']),
+#         data["video_info"]["height"],
+#         data["video_info"]["width"],
+#         frame_interval,
+#         seed + data["id"] * num_bucket,
+#     )
 def apply(data, method=None, frame_interval=None, seed=None, num_bucket=None):
-    #TODO: @levi update
-    # return method(
-    #     data["video_info"]["num_frames"],
-    #     data["video_info"]["height"],
-    #     data["video_info"]["width"],
-    #     frame_interval,
-    #     seed + data["id"] * num_bucket,
-    # )
     return method(
-        len(data['frames']),
-        720,
-        1280,
+        data["num_frames"],
+        data["height"],
+        data["width"],
         frame_interval,
         seed + data["id"] * num_bucket,
     )

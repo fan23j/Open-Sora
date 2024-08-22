@@ -92,6 +92,11 @@ def main():
         model_args["num_frames"] = num_frames
         model_args["ar"] = ar
         model_args["fps"] = fps
+        model_args["conditions"] = torch.load('instance_trajs.pth')
+
+    #transfer conditions to gpu
+    for key in model_args["conditions"]:
+        model_args["conditions"][key] = model_args["conditions"][key].to(device, dtype)
 
     # ======================================================
     # 4. inference
@@ -118,6 +123,7 @@ def main():
             model_args["num_frames"] = model_args["num_frames"][: len(batch_prompts_raw)]
             model_args["ar"] = model_args["ar"][: len(batch_prompts_raw)]
             model_args["fps"] = model_args["fps"][: len(batch_prompts_raw)]
+            model_args["conditions"] = model_args["conditions"][: len(batch_prompts_raw)]
 
         # 4.3. diffusion sampling
         old_sample_idx = sample_idx

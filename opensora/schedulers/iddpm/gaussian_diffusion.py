@@ -388,6 +388,7 @@ class GaussianDiffusion:
         cond_fn=None,
         model_kwargs=None,
         mask=None,
+        conditions=None,
     ):
         """
         Sample x_{t-1} from the model at the given timestep.
@@ -458,6 +459,7 @@ class GaussianDiffusion:
         device=None,
         progress=False,
         mask=None,
+        conditions=None,
     ):
         """
         Generate samples from the model.
@@ -505,6 +507,7 @@ class GaussianDiffusion:
         device=None,
         progress=False,
         mask=None,
+        conditions=None,
     ):
         """
         Generate samples from the model and yield intermediate samples from
@@ -540,6 +543,7 @@ class GaussianDiffusion:
                     cond_fn=cond_fn,
                     model_kwargs=model_kwargs,
                     mask=mask,
+                    conditions=conditions,
                 )
                 yield out
                 img = out["sample"]

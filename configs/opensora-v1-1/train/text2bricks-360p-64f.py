@@ -8,7 +8,7 @@ dataset = dict(
     transform_name="resize_crop",
 )
 bucket_config = {
-    "360p": {1: (1.0, 128), 32: (1.0, 4), 64: (1.0, 2)},
+    "360p": {64: (1.0, 2)},
 }
 mask_ratios = {
     "mask_no": 0.75,

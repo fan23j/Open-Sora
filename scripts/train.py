@@ -568,6 +568,7 @@ def main():
                 start_time = time.time()
                 x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
                 y = batch.pop("text")
+                cond = batch.pop("conditions")
                 # Visual and text encoding
                 with torch.no_grad():
                     model_args = dict()
@@ -581,7 +582,7 @@ def main():
                 else:
                     mask = None
 
-                # Video info
+                # Video info and conditions
                 for k, v in batch.items():
                     model_args[k] = v.to(device, dtype)
 

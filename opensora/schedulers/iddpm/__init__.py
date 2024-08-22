@@ -61,6 +61,7 @@ class IDDPM(SpacedDiffusion):
         device,
         additional_args=None,
         mask=None,
+        conditions=None,
     ):
         n = len(prompts)
         z = torch.cat([z, z], 0)
@@ -78,6 +79,7 @@ class IDDPM(SpacedDiffusion):
             progress=True,
             device=device,
             mask=mask,
+            conditions=conditions,
         )
         samples, _ = samples.chunk(2, dim=0)
         return samples
@@ -90,6 +92,7 @@ def forward_with_cfg(model, x, timestep, cfg_scale, cfg_channel=None, **kwargs):
     if "x_mask" in kwargs and kwargs["x_mask"] is not None:
         if len(kwargs["x_mask"]) != len(x):
             kwargs["x_mask"] = torch.cat([kwargs["x_mask"], kwargs["x_mask"]], dim=0)
+
     model_out = model.forward(combined, timestep, **kwargs)
     model_out = model_out["x"] if isinstance(model_out, dict) else model_out
     if cfg_channel is None:

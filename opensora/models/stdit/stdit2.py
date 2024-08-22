@@ -25,6 +25,7 @@ from opensora.models.layers.blocks import (
 from opensora.registry import MODELS
 from transformers import PretrainedConfig, PreTrainedModel
 from opensora.utils.ckpt_utils import load_checkpoint
+from opensora.models.james import JAMES
 
 
 class STDiT2Block(nn.Module):
@@ -55,6 +56,9 @@ class STDiT2Block(nn.Module):
             qk_norm=qk_norm,
         )
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
+
+        # injection module
+        self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads)
 
         # cross attn
         #self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
@@ -88,7 +92,7 @@ class STDiT2Block(nn.Module):
         x = rearrange(x, "B T S C -> B (T S) C")
         return x
 
-    def forward(self, x, t, t_tmp, x_mask=None, t0=None, t0_tmp=None, T=None, S=None, mask=None):
+    def forward(self, x, t, t_tmp, x_mask=None, t0=None, t0_tmp=None, T=None, S=None, mask=None, conditions=None):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
@@ -110,6 +114,10 @@ class STDiT2Block(nn.Module):
         if x_mask is not None:
             x_m_zero = t2i_modulate(self.norm1(x), shift_msa_zero, scale_msa_zero)
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
+
+        # inject conditions
+        # TODO: add injection conditions to module and config
+        x = self.james(x, conditions)
 
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
@@ -299,7 +307,7 @@ class STDiT2(PreTrainedModel):
         return (T, H, W)
 
     def forward(
-        self, x, timestep, mask=None, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None
+        self, x, timestep, mask=None, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None, conditions=None
     ):
         """
         Forward pass of STDiT.
@@ -378,6 +386,8 @@ class STDiT2(PreTrainedModel):
                 t0_tmp_mlp,
                 T,
                 S,
+                mask,
+                conditions,
             )
             # x.shape: [B, N, C]
 

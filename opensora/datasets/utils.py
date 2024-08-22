@@ -203,3 +203,46 @@ def resize_crop_to_fill(pil_image, image_size):
     arr = np.array(image)
     assert i + th <= arr.shape[0] and j + tw <= arr.shape[1]
     return Image.fromarray(arr[i : i + th, j : j + tw])
+
+
+
+def bounding_box_string_to_tensor(bbox_string, num_frames, num_instances=10):
+    """
+    Convert a string of bounding box coordinates to a tensor, padding if necessary.
+    
+    Args:
+    bbox_string (str): A string of space-separated floating-point numbers representing
+                       bounding box coordinates in the format "x1 y1 w1 h1 x2 y2 w2 h2 ...".
+    num_frames (int): Number of frames in the video.
+    num_instances (int, optional): Number of object instances. Defaults to 10.
+    
+    Returns:
+    torch.Tensor: A tensor of shape [num_instances, num_frames, 4] containing the bounding box coordinates.
+    """
+    # Split the string into individual numbers and convert to floats
+    bbox_values = [float(x) for x in bbox_string.split()]
+    
+    # Calculate the expected number of values
+    expected_values = num_instances * num_frames * 4
+    
+    # If the number of values is less than expected, pad with zeros
+    if len(bbox_values) < expected_values:
+        padding_needed = expected_values - len(bbox_values)
+        bbox_values.extend([0.0] * padding_needed)
+    
+    # If the number of values is more than expected, truncate
+    # SHOULD NEVER HAPPEN
+    elif len(bbox_values) > expected_values:
+        bbox_values = bbox_values[:expected_values]
+    
+    # Reshape the list into a 3D tensor
+    bbox_tensor = torch.tensor(bbox_values).reshape(num_instances, num_frames, 4)
+    
+    return bbox_tensor
+
+def extract_conditions(sample):
+    conditions = {}
+    if "bbox_ratios" in sample:
+        conditions["bbox_ratios"] = bounding_box_string_to_tensor(sample["bbox_ratios"], sample['num_frames'])
+    
+    return conditions
