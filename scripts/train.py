@@ -556,13 +556,13 @@ def main():
 
     if cfg.dataset.type == "VideoTextDataset":
         dataloader.sampler.set_start_index(sampler_start_idx)
-    model_sharding(ema)
 
+    model_sharding(ema)
     # log prompts for pre-training ckpt
     first_global_step = start_epoch * num_steps_per_epoch + start_step
-    #write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
+    write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
     log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
-    
+    print("First global step done")
 
     # 6.2. training loop
     for epoch in range(start_epoch, cfg.epochs):
