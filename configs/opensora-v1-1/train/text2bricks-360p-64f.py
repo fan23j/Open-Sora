@@ -66,7 +66,7 @@ scheduler_inference = dict(
 # Others
 seed = 42
 outputs = "outputs"
-wandb = False
+wandb = True
 
 epochs = 1000
 log_every = 10
@@ -93,4 +93,4 @@ eval_steps = ckpt_every
 wandb_project_name = "STDiT-Motion"
 wandb_project_entity = "Video-Generation-For-Structured-Behavior-Modeling"
 
-exp_id = "unconditional"
+exp_id = "multi_traj_unaligned"

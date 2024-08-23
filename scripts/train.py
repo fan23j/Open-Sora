@@ -250,6 +250,12 @@ def write_sample(model, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype,
 
             samples = []
 
+            conditions = torch.load('instance_trajs.pth')
+
+            #transfer conditions to gpu
+            for key in conditions:
+                conditions[key] = conditions[key].to(device, dtype)
+
             for i in range(0, len(prompts), eval_batch_size):
                 batch_prompts = prompts[i:i + eval_batch_size]
                 batch_z = z[i:i + eval_batch_size]
@@ -264,6 +270,7 @@ def write_sample(model, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype,
                         num_frames=torch.tensor([num_frames], device=device, dtype=dtype).repeat(len(batch_prompts)),
                         ar=torch.tensor([image_size[0] / image_size[1]], device=device, dtype=dtype).repeat(len(batch_prompts)),
                         fps=torch.tensor([fps], device=device, dtype=dtype).repeat(len(batch_prompts)),
+                        conditions=conditions,
                     ),
                 )
 
@@ -340,6 +347,15 @@ def log_sample(is_master, cfg, epoch, exp_dir, global_step, check_interval=1, si
                 print(f"{file_path} not found, skip logging.")            
 
 
+def push_to_device(item, device, dtype):
+    if isinstance(item, dict):
+        return {k: push_to_device(v, device, dtype) for k, v in item.items()}
+    elif isinstance(item, (list, tuple)):
+        return type(item)(push_to_device(v, device, dtype) for v in item)
+    elif hasattr(item, 'to'):
+        return item.to(device, dtype)
+    else:
+        return item
 
 
 
@@ -544,7 +560,7 @@ def main():
 
     # log prompts for pre-training ckpt
     first_global_step = start_epoch * num_steps_per_epoch + start_step
-    write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
+    #write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
     log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
     
 
@@ -567,7 +583,6 @@ def main():
                 start_time = time.time()
                 x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
                 y = batch.pop("text")
-                cond = batch.pop("conditions")
                 # Visual and text encoding
                 with torch.no_grad():
                     model_args = dict()
@@ -583,7 +598,7 @@ def main():
 
                 # Video info and conditions
                 for k, v in batch.items():
-                    model_args[k] = v.to(device, dtype)
+                    model_args[k] = push_to_device(v, device, dtype)
 
                 # Diffusion
                 t = torch.randint(0, scheduler.num_timesteps, (x.shape[0],), device=device)
@@ -618,7 +633,7 @@ def main():
                     writer.add_scalar("loss", loss.item(), global_step)
 
                     weight_norm = calculate_weight_norm(model)
-
+                    #TODO: log training reconstruction and trajectory.
                     if cfg.wandb:
                         wandb.log(
                             {

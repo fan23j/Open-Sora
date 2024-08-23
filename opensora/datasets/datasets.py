@@ -130,7 +130,6 @@ class VariableVideoTextDataset(VideoTextDataset):
         sample = self.data.iloc[index]
         path = sample["path"]
         text = sample["text"]
-        conditions = extract_conditions(sample)
         file_type = self.get_type(path)
         ar = height / width
 
@@ -142,8 +141,10 @@ class VariableVideoTextDataset(VideoTextDataset):
             if "video_fps" in infos:
                 video_fps = infos["video_fps"]
 
-            # Sampling video frames
-            video = temporal_random_crop(vframes, num_frames, self.frame_interval)
+            # sampling video frames
+            video, frame_indices = temporal_random_crop(vframes, num_frames, self.frame_interval)
+            # conditions
+            conditions = extract_conditions(sample, frame_indices)
 
             # transform
             transform = get_transforms_video(self.transform_name, (height, width))
