@@ -1,17 +1,41 @@
+import warnings
+
+# surpress warnings
+warnings.filterwarnings("ignore")
+
+import time
+import wandb
+import torch
+import logging
+import torch.distributed as dist
+
 from copy import deepcopy
 from datetime import timedelta
 from pprint import pprint
+from tqdm import tqdm
+from typing import List, Dict, Optional, Tuple, Union, Any
 
-import torch
-import torch.distributed as dist
-import wandb
 from colossalai.booster import Booster
 from colossalai.booster.plugin import LowLevelZeroPlugin
 from colossalai.cluster import DistCoordinator
 from colossalai.nn.optimizer import HybridAdam
 from colossalai.utils import get_current_device, set_seed
-from tqdm import tqdm
 
+# TODO: use STDiT3 as DiT backbone?
+# https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3
+from opensora.models.stdit.stdit2 import STDiT2
+from opensora.models.vae import VideoAutoencoderKL
+from opensora.schedulers.iddpm import IDDPM
+from opensora.utils.config_entity import TrainingConfig
+from opensora.utils.model_helpers import calculate_weight_norm, push_to_device
+from opensora.utils.lr_schedulers import ConstantWarmupLR, OneCycleScheduler
+from opensora.utils.wandb_logging import write_sample, log_sample
+from opensora.utils.sampler_entities import MicroBatch
+from opensora.datasets.datasets import VariableVideoTextDataset, VariableNBAClipsDataset
+from opensora.datasets.sampler import (
+    VariableVideoBatchSampler,
+    VariableNBAClipsBatchSampler,
+)
 from opensora.acceleration.checkpoint import set_grad_checkpoint
 from opensora.acceleration.parallel_states import (
     get_data_parallel_group,
@@ -19,54 +43,309 @@ from opensora.acceleration.parallel_states import (
     set_sequence_parallel_group,
 )
 from opensora.acceleration.plugin import ZeroSeqParallelPlugin
-from opensora.datasets import prepare_dataloader, prepare_variable_dataloader
+from opensora.datasets import (
+    prepare_variable_dataloader,
+)
 from opensora.registry import DATASETS, MODELS, SCHEDULERS, build_module
-from opensora.utils.ckpt_utils import create_logger, load, model_sharding, record_model_param_shape, save
+from opensora.utils.ckpt_utils import (
+    create_logger,
+    load,
+    model_sharding,
+    record_model_param_shape,
+    save,
+)
 from opensora.utils.config_utils import (
     create_experiment_workspace,
     create_tensorboard_writer,
     parse_configs,
     save_training_config,
 )
-from opensora.utils.misc import all_reduce_mean, format_numel_str, get_model_numel, requires_grad, to_torch_dtype
-from opensora.utils.train_utils import MaskGenerator, update_ema
+from opensora.utils.misc import (
+    all_reduce_mean,
+    format_numel_str,
+    get_model_numel,
+    requires_grad,
+    to_torch_dtype,
+)
+from opensora.utils.train_utils import MaskGenerator, update_ema, log_progress
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+    datefmt="%m-%d %H:%M",
+)
+
+CAPTION_CHANNELS = 4096
+MODEL_MAX_LENGTH = 200
+
+
+def process_batch(
+    batch: Dict,
+    vae: VideoAutoencoderKL,
+    model: STDiT2,
+    scheduler: IDDPM,
+    mask_generator: MaskGenerator,
+    device: torch.device,
+    dtype: torch.dtype,
+):
+    """
+
+    :params:
+    batch: Dict = {
+        "video": video,
+        "text": text,
+        "num_frames": num_frames,
+        "height": height,
+        "width": width,
+        "ar": ar,
+        "fps": video_fps,
+        "conditions": conditions,
+    }
+    """
+
+    x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
+    y = batch.pop("text")
+
+    # Calculate visual and text encoding
+    with torch.no_grad():
+        model_args = dict()
+        x = vae.encode(x)  # [B, C, T, H/P, W/P]
+
+    # Generate masks
+    mask = mask_generator.get_masks(x)
+    model_args["x_mask"] = mask
+
+    # Process additional batch items
+    for k, v in batch.items():
+        model_args[k] = push_to_device(v, device=device, dtype=dtype)
+
+    # Diffusion step
+    t = torch.randint(
+        low=0,
+        high=scheduler.num_timesteps,
+        size=(x.shape[0],),
+        device=device,
+    )
+    
+    # predict noise: () and calculate loss
+    loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
+    return loss_dict
+
+
+def compute_and_apply_gradients(
+    loss: torch.Tensor,
+    booster: Booster,
+    optimizer: HybridAdam,
+    lr_scheduler=None,
+    ema=None,
+    model=None,
+):
+    booster.backward(loss=loss, optimizer=optimizer)
+    optimizer.step()
+    optimizer.zero_grad()
+    if lr_scheduler is not None:
+        lr_scheduler.step()
+    if ema is not None and model is not None:
+        update_ema(ema, model.module, optimizer=optimizer)
+
+
+def save_checkpoint_if_needed(
+    cfg: TrainingConfig,
+    global_step: int,
+    epoch: int,
+    step: int,
+    booster: Booster,
+    model: STDiT2,
+    ema: STDiT2,
+    optimizer: HybridAdam,
+    lr_scheduler: IDDPM,
+    coordinator: DistCoordinator,
+    exp_dir: str,
+    ema_shape_dict: dict,
+    sampler_to_io,
+):
+    if cfg.ckpt_every > 0 and global_step % cfg.ckpt_every == 0 and global_step != 0:
+        save(
+            booster,
+            model,
+            ema,
+            optimizer,
+            lr_scheduler,
+            epoch,
+            step + 1,
+            global_step + 1,
+            cfg.batch_size,
+            coordinator,
+            exp_dir,
+            ema_shape_dict,
+            sampler=sampler_to_io,
+        )
+        logging.info(
+            f"Saved checkpoint at epoch {epoch} step {step + 1} global_step {global_step + 1} to {exp_dir}"
+        )
+
+
+def finalize_epoch(
+    cfg: TrainingConfig, dataloader: torch.utils.data.DataLoader, epoch: int
+):
+    if cfg.dataset.type == "VariableVideoTextDataset":
+        dataloader.batch_sampler.set_epoch(epoch + 1)
+        logging.info("Epoch done, recomputing batch sampler")
+
+
+def train(
+    cfg: TrainingConfig,
+    coordinator: DistCoordinator,
+    logger: logging.Logger,
+    vae: VideoAutoencoderKL,
+    model: STDiT2,
+    scheduler: IDDPM,
+    start_epoch: int,
+    dataloader: torch.utils.data.DataLoader,
+    mask_generator: MaskGenerator,
+    num_steps_per_epoch: int,
+    device: torch.device,
+    dtype: torch.dtype,
+    booster: Booster,
+    optimizer: HybridAdam,
+    lr_scheduler: OneCycleScheduler,
+    ema: STDiT2,
+    writer,
+    exp_dir: str,
+    ema_shape_dict: Dict[str, Any],
+    sampler_to_io: VariableVideoBatchSampler,
+    scheduler_inference: IDDPM,
+) -> None:
+    """
+    Main training loop.
+    """
+
+    running_loss = 0.0
+    log_step = 0
+    acc_step = 0
+
+    for epoch in range(start_epoch, cfg.epochs):
+        dataloader_iter = iter(dataloader)
+        logger.info(f"Beginning epoch {epoch}...")
+
+        with tqdm(
+            iterable=enumerate(dataloader_iter, start=0),
+            desc=f"Epoch {epoch}",
+            disable=not coordinator.is_master(),
+            total=num_steps_per_epoch,
+        ) as pbar:
+            iteration_times = []
+
+            for step, batch in pbar:
+                start_time = time.time()
+
+                # Process the batch
+                loss_dict = process_batch(
+                    batch, vae, model, scheduler, mask_generator, device, dtype
+                )
+                loss = loss_dict["loss"].mean()
+
+                # Compute and apply gradients
+                compute_and_apply_gradients(
+                    loss, booster, optimizer, lr_scheduler, ema, model
+                )
+
+                # Logging
+                global_step = epoch * num_steps_per_epoch + step
+                running_loss += loss.item()
+                log_step += 1
+                acc_step += 1
+                iteration_times.append(time.time() - start_time)
+
+                running_loss, log_step = log_progress(
+                    logger,
+                    coordinator,
+                    global_step,
+                    cfg,
+                    writer,
+                    loss,
+                    running_loss,
+                    log_step,
+                    model,
+                    iteration_times,
+                    optimizer,
+                    epoch,
+                    acc_step,
+                )
+
+                # Save checkpoint if needed
+                save_checkpoint_if_needed(
+                    cfg,
+                    global_step,
+                    epoch,
+                    step,
+                    booster,
+                    model,
+                    ema,
+                    optimizer,
+                    lr_scheduler,
+                    coordinator,
+                    exp_dir,
+                    ema_shape_dict,
+                    sampler_to_io,
+                )
+
+                # Evaluate and save samples if needed
+                if global_step % cfg.eval_steps == 0:
+                    write_sample(
+                        model,
+                        vae,
+                        scheduler_inference,
+                        cfg,
+                        epoch,
+                        exp_dir,
+                        global_step,
+                        dtype,
+                        device,
+                    )
+                    log_sample(
+                        coordinator.is_master(), cfg, epoch, exp_dir, global_step
+                    )
+
+        # Finalize the epoch
+        finalize_epoch(cfg, dataloader, epoch)
 
 
 def main():
-    # ======================================================
-    # 1. args & cfg
-    # ======================================================
-    cfg = parse_configs(training=True)
+    # parse command-line args
+    args = parse_configs(training=True)
+    cfg: TrainingConfig = TrainingConfig(args)
     exp_name, exp_dir = create_experiment_workspace(cfg)
-    save_training_config(cfg._cfg_dict, exp_dir)
-
-    # ======================================================
-    # 2. runtime variables & colossalai launch
-    # ======================================================
+    save_training_config(cfg.to_dict(), exp_dir)
     assert torch.cuda.is_available(), "Training currently requires at least one GPU."
-    assert cfg.dtype in ["fp16", "bf16"], f"Unknown mixed precision {cfg.dtype}"
 
     # 2.1. colossalai init distributed training
     # we set a very large timeout to avoid some processes exit early
     dist.init_process_group(backend="nccl", timeout=timedelta(hours=24))
     torch.cuda.set_device(dist.get_rank() % torch.cuda.device_count())
     set_seed(1024)
+
     coordinator = DistCoordinator()
     device = get_current_device()
     dtype = to_torch_dtype(cfg.dtype)
 
-    # 2.2. init logger, tensorboard & wandb
+    writer: Optional[Any] = None
     if not coordinator.is_master():
         logger = create_logger(None)
     else:
-        print("Training configuration:")
-        pprint(cfg._cfg_dict)
         logger = create_logger(exp_dir)
+        logger.info("Training configuration:")
+        pprint(cfg.to_dict())
         logger.info(f"Experiment directory created at {exp_dir}")
-
         writer = create_tensorboard_writer(exp_dir)
         if cfg.wandb:
-            wandb.init(project="minisora", name=exp_name, config=cfg._cfg_dict)
+            PROJECT = cfg.wandb_project_name
+            wandb.init(
+                project=PROJECT,
+                entity=cfg.wandb_project_entity,
+                name=exp_name,
+                config=cfg.to_dict(),
+            )
 
     # 2.3. initialize ColossalAI booster
     if cfg.plugin == "zero2":
@@ -94,7 +373,13 @@ def main():
     # ======================================================
     # 3. build dataset and dataloader
     # ======================================================
-    dataset = build_module(cfg.dataset, DATASETS)
+    dataset: VariableNBAClipsDataset = VariableNBAClipsDataset(
+        data_path=cfg.dataset.data_path,
+        num_frames=cfg.dataset.num_frames,
+        frame_interval=cfg.dataset.frame_interval,
+        image_size=cfg.dataset.image_size,
+        transform_name=cfg.dataset.transform_name,
+    )
     logger.info(f"Dataset contains {len(dataset)} samples.")
     dataloader_args = dict(
         dataset=dataset,
@@ -107,73 +392,87 @@ def main():
         process_group=get_data_parallel_group(),
     )
     # TODO: use plugin's prepare dataloader
-    if cfg.bucket_config is None:
-        dataloader = prepare_dataloader(**dataloader_args)
-    else:
-        dataloader = prepare_variable_dataloader(
-            bucket_config=cfg.bucket_config,
-            num_bucket_build_workers=cfg.num_bucket_build_workers,
-            **dataloader_args,
-        )
-    if cfg.dataset.type == "VideoTextDataset":
-        total_batch_size = cfg.batch_size * dist.get_world_size() // cfg.sp_size
-        logger.info(f"Total batch size: {total_batch_size}")
+    dataloader = prepare_variable_dataloader(
+        bucket_config=cfg.bucket_config,
+        num_bucket_build_workers=cfg.num_bucket_build_workers,
+        **dataloader_args,
+    )
 
     # ======================================================
     # 4. build model
     # ======================================================
     # 4.1. build model
-    text_encoder = build_module(cfg.text_encoder, MODELS, device=device)
-    vae = build_module(cfg.vae, MODELS)
+
+    # the autoencoder, compresses videos by spatial and temp axis
+    vae: VideoAutoencoderKL = build_module(cfg.vae.to_dict(), MODELS)
+
+    # (None, None, None)
     input_size = (dataset.num_frames, *dataset.image_size)
+
+    # [None, None, None]
     latent_size = vae.get_latent_size(input_size)
-    model = build_module(
-        cfg.model,
-        MODELS,
+
+    # construct the  diffusion transformer
+    # we use: STDiT2-XL/2
+    model: STDiT2 = build_module(
+        module=cfg.model.to_dict(),
+        builder=MODELS,
         input_size=latent_size,
         in_channels=vae.out_channels,
-        caption_channels=text_encoder.output_dim,
-        model_max_length=text_encoder.model_max_length
+        caption_channels=CAPTION_CHANNELS,
+        model_max_length=MODEL_MAX_LENGTH,
     )
+    # get parameter counts
     model_numel, model_numel_trainable = get_model_numel(model)
     logger.info(
         f"Trainable model params: {format_numel_str(model_numel_trainable)}, Total model params: {format_numel_str(model_numel)}"
     )
 
     # 4.2. create ema
-    ema = deepcopy(model).to(torch.float32).to(device)
+    # model that tracks exponential moving avg of params
+    ema: STDiT2 = deepcopy(model).to(torch.float32).to(device)
     requires_grad(ema, False)
-    ema_shape_dict = record_model_param_shape(ema)
+    ema_shape_dict: Dict = record_model_param_shape(ema)
 
     # 4.3. move to device
     vae = vae.to(device, dtype)
     model = model.to(device, dtype)
 
     # 4.4. build scheduler
-    scheduler = build_module(cfg.scheduler, SCHEDULERS)
+    scheduler: IDDPM = build_module(cfg.scheduler.to_dict(), SCHEDULERS)
+    scheduler_inference: IDDPM = build_module(
+        cfg.scheduler_inference.to_dict(), SCHEDULERS
+    )
 
     # 4.5. setup optimizer
-    optimizer = HybridAdam(
+    optimizer: HybridAdam = HybridAdam(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=cfg.lr,
         weight_decay=0,
         adamw_mode=True,
     )
-    lr_scheduler = None
+
+    lr_scheduler: ConstantWarmupLR = ConstantWarmupLR(
+        optimizer, factor=1, warmup_steps=cfg.warmup_steps, last_epoch=-1
+    )
 
     # 4.6. prepare for training
     if cfg.grad_checkpoint:
         set_grad_checkpoint(model)
+
+    logging.info("Begining Training")
     model.train()
     update_ema(ema, model, decay=0, sharded=False)
     ema.eval()
-    if cfg.mask_ratios is not None:
-        mask_generator = MaskGenerator(cfg.mask_ratios)
+
+    # TODO: mask ratios are never `None`
+    mask_generator = MaskGenerator(cfg.mask_ratios)
 
     # =======================================================
     # 5. boost model for distributed training with colossalai
     # =======================================================
     torch.set_default_dtype(dtype)
+    # boost model, optimizer, lr_scheduler, dataloader
     model, optimizer, _, dataloader, lr_scheduler = booster.boost(
         model=model,
         optimizer=optimizer,
@@ -182,140 +481,66 @@ def main():
     )
     torch.set_default_dtype(torch.float)
     logger.info("Boost model for distributed training")
-    if cfg.dataset.type == "VariableVideoTextDataset":
-        num_steps_per_epoch = dataloader.batch_sampler.get_num_batch() // dist.get_world_size()
-    else:
-        num_steps_per_epoch = len(dataloader)
+
+    # TODO: we always use VariableVideoTextDataset
+    assert type(dataloader.batch_sampler) is VariableNBAClipsBatchSampler
+    num_steps_per_epoch = (
+        dataloader.batch_sampler.get_num_batch() // dist.get_world_size()
+    )
 
     # =======================================================
     # 6. training loop
     # =======================================================
     start_epoch = start_step = log_step = sampler_start_idx = acc_step = 0
-    running_loss = 0.0
-    sampler_to_io = dataloader.batch_sampler if cfg.dataset.type == "VariableVideoTextDataset" else None
-    # 6.1. resume training
-    if cfg.load is not None:
-        logger.info("Loading checkpoint")
-        ret = load(
-            booster,
-            model,
-            ema,
-            optimizer,
-            lr_scheduler,
-            cfg.load,
-            sampler=sampler_to_io if not cfg.start_from_scratch else None,
-        )
-        if not cfg.start_from_scratch:
-            start_epoch, start_step, sampler_start_idx = ret
-        logger.info(f"Loaded checkpoint {cfg.load} at epoch {start_epoch} step {start_step}")
-    logger.info(f"Training for {cfg.epochs} epochs with {num_steps_per_epoch} steps per epoch")
+    sampler_to_io: VariableNBAClipsBatchSampler = dataloader.batch_sampler
+    assert type(sampler_to_io) is VariableNBAClipsBatchSampler
+    logger.info(
+        f"Training for {cfg.epochs} epochs with {num_steps_per_epoch} steps per epoch"
+    )
 
-    if cfg.dataset.type == "VideoTextDataset":
-        dataloader.sampler.set_start_index(sampler_start_idx)
+    # split ema
     model_sharding(ema)
 
-    # 6.2. training loop
-    for epoch in range(start_epoch, cfg.epochs):
-        if cfg.dataset.type == "VideoTextDataset":
-            dataloader.sampler.set_epoch(epoch)
-        dataloader_iter = iter(dataloader)
-        logger.info(f"Beginning epoch {epoch}...")
+    ## SAVE SAMPLE ##
+    # first_global_step = start_epoch * num_steps_per_epoch + start_step
+    # write_sample(
+    #     model,
+    #     vae,
+    #     scheduler_inference,
+    #     cfg,
+    #     start_epoch,
+    #     exp_dir,
+    #     first_global_step,
+    #     dtype,
+    #     device,
+    # )
+    # log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
+    # logger.info("First global step done")
 
-        with tqdm(
-            enumerate(dataloader_iter, start=start_step),
-            desc=f"Epoch {epoch}",
-            disable=not coordinator.is_master(),
-            initial=start_step,
-            total=num_steps_per_epoch,
-        ) as pbar:
-            for step, batch in pbar:
-                x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
-                y = batch.pop("text")
-                # Visual and text encoding
-                with torch.no_grad():
-                    # Prepare visual inputs
-                    x = vae.encode(x)  # [B, C, T, H/P, W/P]
-                    # Prepare text inputs
-                    model_args = text_encoder.encode(y)
-
-                # Mask
-                if cfg.mask_ratios is not None:
-                    mask = mask_generator.get_masks(x)
-                    model_args["x_mask"] = mask
-                else:
-                    mask = None
-
-                # Video info
-                for k, v in batch.items():
-                    model_args[k] = v.to(device, dtype)
-
-                # Diffusion
-                t = torch.randint(0, scheduler.num_timesteps, (x.shape[0],), device=device)
-                loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
-
-                # Backward & update
-                loss = loss_dict["loss"].mean()
-                booster.backward(loss=loss, optimizer=optimizer)
-                optimizer.step()
-                optimizer.zero_grad()
-
-                # Update EMA
-                update_ema(ema, model.module, optimizer=optimizer)
-
-                # Log loss values:
-                all_reduce_mean(loss)
-                running_loss += loss.item()
-                global_step = epoch * num_steps_per_epoch + step
-                log_step += 1
-                acc_step += 1
-
-                # Log to tensorboard
-                if coordinator.is_master() and (global_step + 1) % cfg.log_every == 0:
-                    avg_loss = running_loss / log_step
-                    pbar.set_postfix({"loss": avg_loss, "step": step, "global_step": global_step})
-                    running_loss = 0
-                    log_step = 0
-                    writer.add_scalar("loss", loss.item(), global_step)
-                    if cfg.wandb:
-                        wandb.log(
-                            {
-                                "iter": global_step,
-                                "epoch": epoch,
-                                "loss": loss.item(),
-                                "avg_loss": avg_loss,
-                                "acc_step": acc_step,
-                            },
-                            step=global_step,
-                        )
-
-                # Save checkpoint
-                if cfg.ckpt_every > 0 and (global_step + 1) % cfg.ckpt_every == 0:
-                    save(
-                        booster,
-                        model,
-                        ema,
-                        optimizer,
-                        lr_scheduler,
-                        epoch,
-                        step + 1,
-                        global_step + 1,
-                        cfg.batch_size,
-                        coordinator,
-                        exp_dir,
-                        ema_shape_dict,
-                        sampler=sampler_to_io,
-                    )
-                    logger.info(
-                        f"Saved checkpoint at epoch {epoch} step {step + 1} global_step {global_step + 1} to {exp_dir}"
-                    )
-
-        # the continue epochs are not resumed, so we need to reset the sampler start index and start step
-        if cfg.dataset.type == "VideoTextDataset":
-            dataloader.sampler.set_start_index(0)
-        if cfg.dataset.type == "VariableVideoTextDataset":
-            dataloader.batch_sampler.set_epoch(epoch + 1)
-            print("Epoch done, recomputing batch sampler")
-        start_step = 0
+    # train the model
+    train(
+        cfg,
+        coordinator,
+        logger,
+        vae,
+        model,
+        scheduler,
+        start_epoch,
+        dataloader,
+        mask_generator,
+        num_steps_per_epoch,
+        device,
+        dtype,
+        booster,
+        optimizer,
+        lr_scheduler,
+        ema,
+        writer,
+        exp_dir,
+        ema_shape_dict,
+        sampler_to_io,
+        scheduler_inference,
+    )
 
 
 if __name__ == "__main__":

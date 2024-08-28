@@ -1,13 +1,44 @@
 import math
 import random
+import torch
+
 from collections import OrderedDict
 
-import torch
+
+def log_progress(logger, coordinator, global_step, cfg, writer, loss, running_loss, log_step, model, iteration_times, optimizer, epoch, acc_step):
+    if coordinator.is_master() and global_step % cfg.log_every == 0:
+        avg_loss = running_loss / log_step
+        running_loss = 0
+        log_step = 0
+        writer.add_scalar("loss", loss.item(), global_step)
+        weight_norm = calculate_weight_norm(model)
+
+        if cfg.wandb:
+            wandb.log(
+                {
+                    "avg_iteration_time": sum(iteration_times) / len(iteration_times),
+                    "iter": global_step,
+                    "epoch": epoch,
+                    "loss": loss.item(),
+                    "avg_loss": avg_loss,
+                    "acc_step": acc_step,
+                    "lr": optimizer.param_groups[0]["lr"],
+                    "weight_norm": weight_norm,
+                },
+                step=global_step,
+            )
+            iteration_times.clear()
+
+    return running_loss, log_step
 
 
 @torch.no_grad()
 def update_ema(
-    ema_model: torch.nn.Module, model: torch.nn.Module, optimizer=None, decay: float = 0.9999, sharded: bool = True
+    ema_model: torch.nn.Module,
+    model: torch.nn.Module,
+    optimizer=None,
+    decay: float = 0.9999,
+    sharded: bool = True,
 ) -> None:
     """
     Step the EMA model towards the current model.
@@ -26,7 +57,8 @@ def update_ema(
         else:
             if param.data.dtype != torch.float32:
                 param_id = id(param)
-                master_param = optimizer._param_store.working_to_master_param[param_id]
+                master_param = optimizer.working_to_master_param[param_id]
+                # master_param = optimizer._param_group.working_to_master_param[param_id]
                 param_data = master_param.data
             else:
                 param_data = param.data
@@ -59,7 +91,7 @@ class MaskGenerator:
         assert math.isclose(
             sum(mask_ratios.values()), 1.0, abs_tol=1e-6
         ), f"sum of mask_ratios should be 1, got {sum(mask_ratios.values())}"
-        print(f"mask ratios: {mask_ratios}")
+        # print(f"mask ratios: {mask_ratios}")
         self.mask_ratios = mask_ratios
 
     def get_mask(self, x):

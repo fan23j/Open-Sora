@@ -10,7 +10,7 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-def process_single_row(row):
+def process_single_row(row, min_scene_len):
     # windows
     # from scenedetect import detect, ContentDetector, AdaptiveDetector
 
@@ -18,6 +18,7 @@ def process_single_row(row):
 
     detector = AdaptiveDetector(
         adaptive_threshold=3.0,
+        min_scene_len = min_scene_len,
         # luma_only=True,
     )
     # detector = ContentDetector()
@@ -34,6 +35,7 @@ def process_single_row(row):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("meta_path", type=str)
+    parser.add_argument("--min-scene-len", type=int, default=90, help="Minimal number of frames for scenedetect")
 
     args = parser.parse_args()
     return args
@@ -46,7 +48,7 @@ def main():
     pandarallel.initialize(progress_bar=True)
 
     meta = pd.read_csv(meta_path)
-    ret = meta.parallel_apply(process_single_row, axis=1)
+    ret = meta.parallel_apply(process_single_row, args=(args.min_scene_len,), axis=1)
 
     succ, timestamps = list(zip(*ret))
     meta["timestamp"] = timestamps

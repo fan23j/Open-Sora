@@ -7,7 +7,8 @@ from io import BytesIO
 import requests
 import tqdm
 
-from .utils import IMG_EXTENSIONS, PROMPTS, VID_EXTENSIONS, VideoTextDataset
+from tools.caption.utils import PROMPTS, VideoTextDataset
+from tools.datasets.utils import IMG_EXTENSIONS, VID_EXTENSIONS
 
 
 def to_base64(image):

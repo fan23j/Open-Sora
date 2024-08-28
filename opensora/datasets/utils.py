@@ -60,7 +60,7 @@ def temporal_random_crop(vframes, num_frames, frame_interval):
     assert end_frame_ind - start_frame_ind >= num_frames
     frame_indice = np.linspace(start_frame_ind, end_frame_ind - 1, num_frames, dtype=int)
     video = vframes[frame_indice]
-    return video
+    return video, frame_indice
 
 
 def get_transforms_video(name="center", image_size=(256, 256)):
@@ -203,3 +203,50 @@ def resize_crop_to_fill(pil_image, image_size):
     arr = np.array(image)
     assert i + th <= arr.shape[0] and j + tw <= arr.shape[1]
     return Image.fromarray(arr[i : i + th, j : j + tw])
+
+
+
+def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
+    """
+    Convert a string of bounding box coordinates to a tensor, extracting only the specified frames.
+    
+    Args:
+    bbox_string (str): A string of comma-separated floating-point numbers representing
+                       bounding box coordinates in the format "x1,y1,w1,h1,x2,y2,w2,h2,...".
+    frame_indices (list): List of frame indices to extract.
+    num_instances (int, optional): Number of object instances. Defaults to 10.
+    
+    Returns:
+    torch.Tensor: A tensor of shape [num_instances, len(frame_indices), 4] containing the extracted bounding box coordinates.
+    """
+    # Clean and parse the string
+    cleaned_string = bbox_string.strip('[]() ').strip()
+    bbox_values = [float(x) for x in cleaned_string.split(",")]
+    
+    # Calculate the total number of frames in the original data
+    total_frames = len(bbox_values) // (num_instances * 4)
+    
+    # Extract only the specified frames
+    extracted_values = []
+    for frame in frame_indices:
+        if frame < total_frames:
+            start_idx = frame * num_instances * 4
+            end_idx = start_idx + num_instances * 4
+            extracted_values.extend(bbox_values[start_idx:end_idx])
+        else:
+            # If frame index is out of range, pad with zeros
+            extracted_values.extend([0.0] * (num_instances * 4))
+    
+    # Reshape into [num_instances, len(frame_indices), 4]
+    num_frames = len(frame_indices)
+    return torch.tensor(extracted_values).reshape(num_instances, num_frames, 4)
+
+def extract_conditions(sample, frame_indices):
+    conditions = {}
+    if "player_trajectories" in sample:
+        conditions["bbox_ratios"] = bounding_box_string_to_tensor(
+            sample["player_trajectories"], 
+            frame_indices
+        )
+    
+    return conditions

@@ -52,6 +52,10 @@ def all_reduce_mean(tensor: torch.Tensor) -> torch.Tensor:
 
 
 def get_model_numel(model: torch.nn.Module) -> Tuple[int, int]:
+    """
+    Return the number of parameters and trainable parameters of a model respectively.
+    """
+
     num_params = 0
     num_params_trainable = 0
     for p in model.parameters():
@@ -272,7 +276,9 @@ def build_logger(work_dir, cfgname):
     logger = logging.getLogger(cfgname)
     logger.setLevel(logging.INFO)
     # formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    formatter = logging.Formatter("%(asctime)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    formatter = logging.Formatter(
+        "%(asctime)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
     handler1 = logging.FileHandler(log_path)
     handler1.setFormatter(formatter)

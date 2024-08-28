@@ -1,7 +1,7 @@
-from collections import OrderedDict
-
 import numpy as np
 
+from typing import Dict, Tuple
+from collections import OrderedDict
 from .aspect import ASPECT_RATIOS, get_closest_ratio
 
 
@@ -27,17 +27,32 @@ def find_closet_smaller_bucket(t, t_dict, frame_interval):
 
 
 class Bucket:
-    def __init__(self, bucket_config):
+    """
+    A Bucket is a group of samples collated by similar resolution / # frames.
+    """
+    
+    def __init__(self, bucket_config: Dict):
         for key in bucket_config:
             assert key in ASPECT_RATIOS, f"Aspect ratio {key} not found."
+            
         # wrap config with OrderedDict
         bucket_probs = OrderedDict()
         bucket_bs = OrderedDict()
-        bucket_names = sorted(bucket_config.keys(), key=lambda x: ASPECT_RATIOS[x][0], reverse=True)
+        
+        # sort buckets by aspect ratio
+        bucket_names = sorted(
+            bucket_config.keys(), key=lambda x: ASPECT_RATIOS[x][0], reverse=True
+        )
         for key in bucket_names:
-            bucket_time_names = sorted(bucket_config[key].keys(), key=lambda x: x, reverse=True)
-            bucket_probs[key] = OrderedDict({k: bucket_config[key][k][0] for k in bucket_time_names})
-            bucket_bs[key] = OrderedDict({k: bucket_config[key][k][1] for k in bucket_time_names})
+            bucket_time_names = sorted(
+                bucket_config[key].keys(), key=lambda x: x, reverse=True
+            )
+            bucket_probs[key] = OrderedDict(
+                {k: bucket_config[key][k][0] for k in bucket_time_names}
+            )
+            bucket_bs[key] = OrderedDict(
+                {k: bucket_config[key][k][1] for k in bucket_time_names}
+            )
 
         # first level: HW
         num_bucket = 0
@@ -67,7 +82,6 @@ class Bucket:
         self.t_criteria = t_criteria
         self.ar_criteria = ar_criteria
         self.num_bucket = num_bucket
-        print(f"Number of buckets: {num_bucket}")
 
     def get_bucket_id(self, T, H, W, frame_interval=1, seed=None):
         resolution = H * W
@@ -111,19 +125,28 @@ class Bucket:
         ar_id = get_closest_ratio(H, W, ar_criteria)
         return hw_id, t_id, ar_id
 
-    def get_thw(self, bucket_id):
+    def get_thw(self, bucket_id: Tuple[str, int, str]):
         assert len(bucket_id) == 3
         T = self.t_criteria[bucket_id[0]][bucket_id[1]]
         H, W = self.ar_criteria[bucket_id[0]][bucket_id[1]][bucket_id[2]]
         return T, H, W
 
-    def get_prob(self, bucket_id):
+    def get_prob(self, bucket_id: Tuple[str, int, str]):
         return self.bucket_probs[bucket_id[0]][bucket_id[1]]
 
-    def get_batch_size(self, bucket_id):
+    def get_batch_size(self, bucket_id: Tuple[str, int, str]) -> int:
+        """
+        Return the batch size of a bucket / group of samples.
+        """
+        
+        # an example bucket_id: ('360p', (64, 2))
         return self.bucket_bs[bucket_id[0]][bucket_id[1]]
+    
+        # HACK: return the batch size of a bucket
+        # resolution = list(self.bucket_bs.keys())[0]
+        # return list(self.bucket_bs[resolution].keys())[0]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.num_bucket
 
 

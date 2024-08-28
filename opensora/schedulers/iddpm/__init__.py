@@ -56,18 +56,16 @@ class IDDPM(SpacedDiffusion):
     def sample(
         self,
         model,
-        text_encoder,
         z,
         prompts,
         device,
         additional_args=None,
         mask=None,
+        conditions=None,
     ):
         n = len(prompts)
         z = torch.cat([z, z], 0)
-        model_args = text_encoder.encode(prompts)
-        y_null = text_encoder.null(n)
-        model_args["y"] = torch.cat([model_args["y"], y_null], 0)
+        model_args = dict()
         if additional_args is not None:
             model_args.update(additional_args)
 
@@ -81,19 +79,21 @@ class IDDPM(SpacedDiffusion):
             progress=True,
             device=device,
             mask=mask,
+            conditions=conditions,
         )
         samples, _ = samples.chunk(2, dim=0)
         return samples
 
 
-def forward_with_cfg(model, x, timestep, y, cfg_scale, cfg_channel=None, **kwargs):
+def forward_with_cfg(model, x, timestep, cfg_scale, cfg_channel=None, **kwargs):
     # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
     half = x[: len(x) // 2]
     combined = torch.cat([half, half], dim=0)
     if "x_mask" in kwargs and kwargs["x_mask"] is not None:
         if len(kwargs["x_mask"]) != len(x):
             kwargs["x_mask"] = torch.cat([kwargs["x_mask"], kwargs["x_mask"]], dim=0)
-    model_out = model.forward(combined, timestep, y, **kwargs)
+
+    model_out = model.forward(combined, timestep, **kwargs)
     model_out = model_out["x"] if isinstance(model_out, dict) else model_out
     if cfg_channel is None:
         cfg_channel = model_out.shape[1] // 2

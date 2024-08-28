@@ -1,4 +1,5 @@
 # Byte-compiled / optimized / DLL files
+__old__/*
 __pycache__/
 *.py[cod]
 *$py.class
@@ -186,3 +187,8 @@ wandb/
 node_modules/
 package-lock.json
 package.json
+
+# other
+pretrained/
+ColossalAI/
+apex/
