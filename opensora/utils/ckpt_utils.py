@@ -14,8 +14,7 @@ from colossalai.cluster import DistCoordinator
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 from torchvision.datasets.utils import download_url
-
-from opensora.datasets.sampler import NBAClipsBatchSampler
+from opensora.datasets.sampler import VariableNBAClipsBatchSampler
 
 hf_endpoint = os.environ.get("HF_ENDPOINT")
 if hf_endpoint is None:
@@ -234,7 +233,7 @@ def save(
     if coordinator.is_master():
         save_json(running_states, os.path.join(save_dir, "running_states.json"))
         if sampler is not None:
-            if isinstance(sampler, NBAClipsBatchSampler):
+            if isinstance(sampler, VariableNBAClipsBatchSampler):
                 torch.save(sampler.state_dict(step), os.path.join(save_dir, "sampler"))
             else:
                 torch.save(sampler.state_dict(), os.path.join(save_dir, "sampler"))

@@ -61,12 +61,13 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         transform_name: Optional[str] = "center",
     ):
         
+        # breakpoint()
         # dataset wrapper
         self.filtered_dataset = FilteredClipDataset(DATASET_DIR)
 
         # HACK: using one sample
         self.annotation_file_paths: List[str] = (
-            self.filtered_ds.filtered_clip_annotations_file_paths
+            self.filtered_dataset.filtered_clip_annotations_file_paths
         )
         self.annotation_file_paths: List[str] = self.annotation_file_paths[:1]
         
@@ -89,11 +90,11 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         
         # MARK: we only support videos
         self.transform = get_transforms_video(transform_name, image_size)
-        breakpoint()
+        # breakpoint()
         
         # TODO: this is pretty janky
         # (T, 10)
-        self.bbxs: List[List[BoundingBox]] = [frame.bbox for frame in self.ann.frames]
+        self.bbxs: List[List[BoundingBox]] = [frame.bbox for frame in self.clip_annotation.frames]
         bbx_ratios = []
         for bbx_arr in self.bbxs:
             ratios_arr = []
@@ -152,7 +153,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         }
         
         # transform
-        transform = get_transforms_video(self.transform_name, (height, width))
+        transform = get_transforms_video(self.transform, (height, width))
         video = transform(video)  # T C H W
 
         # TCHW -> CTHW

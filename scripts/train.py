@@ -32,7 +32,7 @@ from opensora.utils.lr_schedulers import ConstantWarmupLR, OneCycleScheduler
 from opensora.utils.wandb_logging import write_sample, log_sample
 from opensora.utils.sampler_entities import MicroBatch
 from opensora.datasets.datasets import NBAClipsDataset
-from opensora.datasets.sampler import NBAClipsBatchSampler
+from opensora.datasets.sampler import VariableNBAClipsBatchSampler
 from opensora.acceleration.checkpoint import set_grad_checkpoint
 from opensora.acceleration.parallel_states import (
     get_data_parallel_group,
@@ -210,7 +210,7 @@ def train(
     writer,
     exp_dir: str,
     ema_shape_dict: Dict[str, Any],
-    sampler_to_io: NBAClipsBatchSampler,
+    sampler_to_io: VariableNBAClipsBatchSampler,
     scheduler_inference: IDDPM,
 ) -> None:
     """
@@ -377,6 +377,7 @@ def main():
         transform_name=cfg.dataset.transform_name,
     )
     logger.info(f"Dataset contains {len(dataset)} samples.")
+
     dataloader_args = dict(
         dataset=dataset,
         batch_size=cfg.batch_size,
@@ -452,7 +453,7 @@ def main():
         optimizer, factor=1, warmup_steps=cfg.warmup_steps, last_epoch=-1
     )
 
-    # 4.6. prepare for training
+    # set grad checkpoint
     if cfg.grad_checkpoint:
         set_grad_checkpoint(model)
 
@@ -464,10 +465,9 @@ def main():
     # TODO: mask ratios are never `None`
     mask_generator = MaskGenerator(cfg.mask_ratios)
 
-    # =======================================================
-    # 5. boost model for distributed training with colossalai
-    # =======================================================
+    # set default dtype
     torch.set_default_dtype(dtype)
+
     # boost model, optimizer, lr_scheduler, dataloader
     model, optimizer, _, dataloader, lr_scheduler = booster.boost(
         model=model,
@@ -479,7 +479,7 @@ def main():
     logger.info("Boost model for distributed training")
 
     # TODO: we always use VariableVideoTextDataset
-    assert type(dataloader.batch_sampler) is NBAClipsBatchSampler()
+    assert type(dataloader.batch_sampler) is VariableNBAClipsBatchSampler
     num_steps_per_epoch = (
         dataloader.batch_sampler.get_num_batch() // dist.get_world_size()
     )
@@ -489,7 +489,7 @@ def main():
     # =======================================================
     start_epoch = start_step = log_step = sampler_start_idx = acc_step = 0
     sampler_to_io: NBAClipsDataset = dataloader.batch_sampler
-    assert type(sampler_to_io) is NBAClipsDataset
+    assert type(sampler_to_io) is VariableNBAClipsBatchSampler
     logger.info(
         f"Training for {cfg.epochs} epochs with {num_steps_per_epoch} steps per epoch"
     )
