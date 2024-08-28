@@ -296,7 +296,7 @@ def pos2d_string_to_tensor(pos2d, frame_indices, num_instances=11):
             extracted_values.extend(pos2d[frame])
         else:
             # If frame index is out of range, pad with zeros
-            extracted_values.extend([0.0] * (num_instances * 3))
+            extracted_values.extend(np.zeros((num_instances, 3)))
     
     # Reshape into [num_instances, len(frame_indices), 3]
     num_frames = len(frame_indices)
