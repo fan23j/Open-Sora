@@ -9,9 +9,8 @@ from typing import Iterator, List, Optional, Tuple
 from pandarallel import pandarallel
 from torch.utils.data import DistributedSampler
 from opensora.utils.sampler_entities import MicroBatch
-from nba.src.statvu_align.entities.clip_dataset import FilteredClipDataset
 from .bucket import Bucket
-from .datasets import VariableVideoTextDataset, VariableNBAClipsDataset
+from .datasets import NBAClipsDataset
 
 HARD_CODED_NUM_BATCHES = 1
 
@@ -28,7 +27,7 @@ def apply(data, method=None, frame_interval=None, seed=None, num_bucket=None):
 class VariableNBAClipsBatchSampler(DistributedSampler):
     def __init__(
         self,
-        dataset: VariableNBAClipsDataset,
+        dataset: NBAClipsDataset,
         bucket_config: dict,
         num_replicas: Optional[int] = None,
         rank: Optional[int] = None,
@@ -71,7 +70,7 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
         """
         return HARD_CODED_NUM_BATCHES
 
-    def __iter__(self) -> Iterator[List[int]]:
+    def __iter__(self) -> Iterator[List[MicroBatch]]:
 
         if self._get_num_batch_cached_bucket_sample_dict is not None:
             bucket_sample_dict = self._get_num_batch_cached_bucket_sample_dict
@@ -224,10 +223,10 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
             return (len(self.dataset) + min_batch_size - 1) // min_batch_size
 
 
-class VariableVideoBatchSampler(DistributedSampler):
+class NBAClipsBatchSampler(DistributedSampler):
     def __init__(
         self,
-        dataset: VariableVideoTextDataset,
+        dataset: NBAClipsDataset,
         bucket_config: dict,
         num_replicas: Optional[int] = None,
         rank: Optional[int] = None,
