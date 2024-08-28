@@ -66,7 +66,7 @@ scheduler_inference = dict(
 # Others
 seed = 42
 outputs = "outputs"
-wandb = False
+wandb = True
 
 epochs = 1000
 log_every = 10
@@ -81,7 +81,7 @@ batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-        "A basketball player missing a three-point shot",  
+        "A basketball player assisting on a play",  
 ]
 
 eval_image_size = (360, 640)

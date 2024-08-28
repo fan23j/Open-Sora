@@ -309,6 +309,6 @@ def extract_conditions(sample, frame_indices):
     #         sample["player_trajectories"], 
     #         frame_indices
     #     )
-    conditions["pos2ds"] = pos2d_string_to_tensor(sample['pos2ds'], frame_indices)
+    conditions["pos2ds"] = pos2d_string_to_tensor(sample["2d_pos"], frame_indices)
     
     return conditions
