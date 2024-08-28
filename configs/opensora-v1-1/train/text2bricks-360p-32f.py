@@ -66,7 +66,7 @@ scheduler_inference = dict(
 # Others
 seed = 1024
 outputs = "outputs"
-wandb = True
+wandb = False
 
 epochs = 1000
 log_every = 10

@@ -1,1 +1,2 @@
 from .multi_traj_encoder.multi_traj_encoder import MultiTrajEncoder
+from .pos2d_encoder.pos2d_encoder import Pos2D_Encoder

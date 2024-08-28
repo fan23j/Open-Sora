@@ -241,12 +241,74 @@ def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
     num_frames = len(frame_indices)
     return torch.tensor(extracted_values).reshape(num_instances, num_frames, 4)
 
+# def sample_dic_to_2d_pos_tensor(sample, frame_indices, num_instances=11):
+    # """
+    # Convert a dic of 2d positions to a tensor, extracting only the specified frames.
+    
+    # Args:
+
+    # frame_indices (list): List of frame indices to extract.
+    # num_instances (int, optional): Number of object instances. Defaults to 11.
+    
+    # Returns:
+    # torch.Tensor: A tensor of shape [num_instances, len(frame_indices), 3] containing the extracted x, y, z coordinates.
+    # """    
+    # # Calculate the total number of frames in the original data
+    # total_frames = len(sample)
+    
+#     # Extract only the specified frames
+#     extracted_values = []
+#     for frame in frame_indices:
+#         if frame < total_frames:
+#             for i in range(num_instances):
+#                 x_pos = sample[frame]['player_positions'][i]['x']
+#                 y_pos = sample[frame]['player_positions'][i]['y']
+#                 z_pos = sample[frame]['player_positions'][i]['z']
+#                 extracted_values.extend([x_pos, y_pos, z_pos])
+#         else:
+#             # If frame index is out of range, pad with zeros
+#             extracted_values.extend([0.0] * (num_instances * 3))
+    
+#     # Reshape into [num_instances, len(frame_indices), 3]
+#     num_frames = len(frame_indices)
+#     return torch.tensor(extracted_values).reshape(num_instances, num_frames, 3)
+
+
+def pos2d_string_to_tensor(pos2d, frame_indices, num_instances=11):
+    """
+    Convert a dic of 2d positions to a tensor, extracting only the specified frames.
+    
+    Args:
+
+    frame_indices (list): List of frame indices to extract.
+    num_instances (int, optional): Number of object instances. Defaults to 11.
+    
+    Returns:
+    torch.Tensor: A tensor of shape [num_instances, len(frame_indices), 3] containing the extracted x, y, z coordinates.
+    """  
+    # Clean and parse the string
+    pos2d = eval(pos2d, {"array": np.array})
+    # Extract only the specified frames
+    extracted_values = []
+    total_frames = len(pos2d)
+    for frame in frame_indices:
+        if frame < total_frames:
+            extracted_values.extend(pos2d[frame])
+        else:
+            # If frame index is out of range, pad with zeros
+            extracted_values.extend(np.zeros((num_instances, 3)))
+    
+    # Reshape into [num_instances, len(frame_indices), 3]
+    num_frames = len(frame_indices)
+    return torch.tensor(extracted_values).reshape(num_instances, num_frames, 3)
+
 def extract_conditions(sample, frame_indices):
     conditions = {}
-    if "player_trajectories" in sample:
-        conditions["bbox_ratios"] = bounding_box_string_to_tensor(
-            sample["player_trajectories"], 
-            frame_indices
-        )
+    # if "player_trajectories" in sample:
+    #     conditions["bbox_ratios"] = bounding_box_string_to_tensor(
+    #         sample["player_trajectories"], 
+    #         frame_indices
+    #     )
+    conditions["pos2ds"] = pos2d_string_to_tensor(sample["2d_pos"], frame_indices)
     
     return conditions

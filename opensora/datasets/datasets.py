@@ -1,10 +1,10 @@
 import os
-
+import re
 import numpy as np
 import torch
 import torchvision
 from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
-
+import pickle
 from opensora.registry import DATASETS
 
 from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop, extract_conditions
@@ -129,14 +129,17 @@ class VariableVideoTextDataset(VideoTextDataset):
 
         sample = self.data.iloc[index]
         path = sample["path"]
+        if path.endswith('.pkl'):
+            video_path = re.sub(r'_annotation_(\d).pkl$', r'_\1.mp4', path)
         text = sample["text"]
-        file_type = self.get_type(path)
+        file_type = self.get_type(video_path)
         ar = height / width
 
         video_fps = 24  # default fps
         if file_type == "video":
-            # loading
-            path = f'/mnt/mir/fan23j/data/nba-plus-statvu-dataset/filtered-clips/{path}'
+            # with open(f'/mnt/mir/fan23j/data/nba-plus-statvu-dataset/filtered-clip-statvu-moments/{path}', 'rb') as file:
+            #     data = pickle.load(file)
+            path = f'/mnt/mir/fan23j/data/nba-plus-statvu-dataset/filtered-clips/{video_path}'
             vframes, _, infos = torchvision.io.read_video(filename=path, pts_unit="sec", output_format="TCHW")
             if "video_fps" in infos:
                 video_fps = infos["video_fps"]
@@ -149,6 +152,9 @@ class VariableVideoTextDataset(VideoTextDataset):
             # transform
             transform = get_transforms_video(self.transform_name, (height, width))
             video = transform(video)  # T C H W
+        
+
+        
         else:
             # loading
             image = pil_loader(path)
