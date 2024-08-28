@@ -424,6 +424,7 @@ def main():
     # ======================================================
     # 3. build dataset and dataloader
     # ======================================================
+    print("Building dataset")
     dataset = build_module(cfg.dataset, DATASETS)
     logger.info(f"Dataset contains {len(dataset)} samples.")
     dataloader_args = dict(
@@ -560,8 +561,8 @@ def main():
     model_sharding(ema)
     # log prompts for pre-training ckpt
     first_global_step = start_epoch * num_steps_per_epoch + start_step
-    write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
-    log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
+    # write_sample(model, vae, scheduler_inference, cfg, start_epoch, exp_dir, first_global_step, dtype, device)
+    # log_sample(coordinator.is_master(), cfg, start_epoch, exp_dir, first_global_step)
     print("First global step done")
 
     # 6.2. training loop

@@ -66,7 +66,7 @@ scheduler_inference = dict(
 # Others
 seed = 42
 outputs = "outputs"
-wandb = True
+wandb = False
 
 epochs = 1000
 log_every = 10
@@ -81,7 +81,7 @@ batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-        "A basketball player missing a three-point shot",  
+        "",  
 ]
 
 eval_image_size = (360, 640)
@@ -93,4 +93,4 @@ eval_steps = ckpt_every
 wandb_project_name = "STDiT-Motion"
 wandb_project_entity = "Video-Generation-For-Structured-Behavior-Modeling"
 
-exp_id = "multi_traj_unaligned"
+exp_id = "multi_traj_aligned_before_spatial_mod"

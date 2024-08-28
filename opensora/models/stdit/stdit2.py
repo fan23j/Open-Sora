@@ -40,6 +40,7 @@ class STDiT2Block(nn.Module):
         enable_sequence_parallelism=False,
         rope=None,
         qk_norm=False,
+        y_embedder=None,
     ):
         super().__init__()
         self.hidden_size = hidden_size
@@ -58,10 +59,10 @@ class STDiT2Block(nn.Module):
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
         # injection module
-        self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads)
+        self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads, y_embedder=y_embedder)
 
         # cross attn
-        #self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
+        # self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # mlp branch
         self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
@@ -109,15 +110,14 @@ class STDiT2Block(nn.Module):
                 self.scale_shift_table_temporal[None] + t0_tmp.reshape(B, 3, -1)
             ).chunk(3, dim=1)
 
+        # inject conditions
+        x = self.james(x, conditions, inject_bbox=False)
+
         # modulate
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
         if x_mask is not None:
             x_m_zero = t2i_modulate(self.norm1(x), shift_msa_zero, scale_msa_zero)
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
-
-        # inject conditions
-        # TODO: add injection conditions to module and config
-        x = self.james(x, conditions)
 
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
@@ -148,9 +148,9 @@ class STDiT2Block(nn.Module):
         else:
             x_t = gate_tmp * x_t
         x = x + self.drop_path(x_t)
-
-        # cross attn
-        #x = x + self.cross_attn(x, y, mask)
+    
+        # inject conditions
+        x = self.james(x, conditions, inject_text=True)
 
         # modulate
         x_m = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -270,6 +270,7 @@ class STDiT2(PreTrainedModel):
                     enable_layernorm_kernel=self.enable_layernorm_kernel,
                     rope=self.rope.rotate_queries_or_keys,
                     qk_norm=config.qk_norm,
+                    y_embedder=self.y_embedder,
                 )
                 for i in range(self.depth)
             ]

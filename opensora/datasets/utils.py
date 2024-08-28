@@ -220,8 +220,9 @@ def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
     torch.Tensor: A tensor of shape [num_instances, len(frame_indices), 4] containing the extracted bounding box coordinates.
     """
     # Clean and parse the string
-    cleaned_string = bbox_string.strip('[]() ').strip()
-    bbox_values = [float(x) for x in cleaned_string.split(",")]
+    # cleaned_string = bbox_string.strip('[]() ').strip()
+    # bbox_values = [float(x) for x in cleaned_string.split(",")]
+    bbox_values = eval(bbox_string, {"array": np.array})
     
     # Calculate the total number of frames in the original data
     total_frames = len(bbox_values) // (num_instances * 4)
@@ -229,13 +230,7 @@ def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
     # Extract only the specified frames
     extracted_values = []
     for frame in frame_indices:
-        if frame < total_frames:
-            start_idx = frame * num_instances * 4
-            end_idx = start_idx + num_instances * 4
-            extracted_values.extend(bbox_values[start_idx:end_idx])
-        else:
-            # If frame index is out of range, pad with zeros
-            extracted_values.extend([0.0] * (num_instances * 4))
+        extracted_values.extend(bbox_values[frame])
     
     # Reshape into [num_instances, len(frame_indices), 4]
     num_frames = len(frame_indices)

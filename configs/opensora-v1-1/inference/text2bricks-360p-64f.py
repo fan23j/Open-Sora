@@ -10,7 +10,7 @@ model = dict(
     from_pretrained="lambdalabs/text2bricks-360p-64f",
     input_sq_size=512,
     qk_norm=True,
-    enable_flash_attn=True,
+    enable_flash_attn=False,
     enable_layernorm_kernel=True,
 )
 vae = dict(

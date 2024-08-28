@@ -12,7 +12,6 @@ from opensora.registry import MODELS, SCHEDULERS, build_module
 from opensora.utils.config_utils import parse_configs
 from opensora.utils.misc import to_torch_dtype
 
-
 def main():
     # ======================================================
     # 1. cfg and init distributed env
@@ -92,7 +91,7 @@ def main():
         model_args["num_frames"] = num_frames
         model_args["ar"] = ar
         model_args["fps"] = fps
-        model_args["conditions"] = torch.load('instance_trajs.pth')
+        model_args["conditions"] = torch.load('/mnt/mir/fan23j/data/nba-plus-statvu-dataset/__scripts__/conditions.pth')
 
     #transfer conditions to gpu
     for key in model_args["conditions"]:
