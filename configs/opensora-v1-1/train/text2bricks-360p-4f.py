@@ -1,4 +1,4 @@
-# Define dataset
+# define dataset
 dataset = dict(
     type="VariableVideoTextDataset",
     data_path=None,
@@ -23,14 +23,14 @@ mask_ratios = {
 }
 
 # Define acceleration
-num_workers = 0
-num_bucket_build_workers = 0
+num_workers = 8
+num_bucket_build_workers = 8
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
 sp_size = 1
 
-# Define model
+# define model
 model = dict(
     type="STDiT2-XL/2",
     from_pretrained=None,
@@ -56,7 +56,7 @@ scheduler_inference = dict(
     cfg_channel=3,  # or None
 )
 
-# Others
+# misc
 seed = 42
 outputs = "outputs"
 wandb = False
@@ -76,7 +76,6 @@ grad_clip = 1.0
 eval_prompts = [
     "A basketball player missing a three-point shot",
 ]
-
 eval_image_size = (360, 640)
 eval_num_frames = 4
 eval_fps = 8

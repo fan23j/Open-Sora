@@ -230,7 +230,7 @@ def train(
 
         with tqdm(
             iterable=enumerate(dataloader_iter, start=0),
-            desc=f"Training JAMES | Epoch {epoch}",
+            desc=f"Training JAMES ⛹️ | Epoch {epoch}",
             disable=not coordinator.is_master(),
             total=num_steps_per_epoch,
         ) as pbar:
@@ -453,7 +453,6 @@ def main():
         weight_decay=0,
         adamw_mode=True,
     )
-
     lr_scheduler: ConstantWarmupLR = ConstantWarmupLR(
         optimizer, factor=1, warmup_steps=cfg.warmup_steps, last_epoch=-1
     )

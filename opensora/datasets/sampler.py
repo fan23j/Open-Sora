@@ -70,7 +70,7 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
                 "360p",
                 4,
                 "1.00",
-            ): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths[:100]
+            ): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths
         }
         return bucket_sample_dict
 
@@ -78,7 +78,7 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
         """
         TODO: hard-code the number of batches to 1.
         """
-        return HARD_CODED_NUM_BATCHES
+        return len(self.dataset.filtered_dataset.filtered_clip_annotations_file_paths)
 
     def __iter__(self) -> Iterator[List[MicroBatch]]:
 
