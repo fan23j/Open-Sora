@@ -126,7 +126,7 @@ def process_batch(
     # predict noise: () and calculate loss
     # 10GB -> 35GB
     loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
-    pprint(loss_dict)
+    # pprint(loss_dict)
     return loss_dict
 
 
@@ -140,8 +140,8 @@ def compute_and_apply_gradients(
 ):
 
     # TODO: we will try using the standard `backward` func
-    # booster.backward(loss=loss, optimizer=optimizer)
-    loss.backward()
+    # loss.backward()
+    booster.backward(loss=loss, optimizer=optimizer)
     optimizer.step()
     optimizer.zero_grad()
     if lr_scheduler is not None:
@@ -344,9 +344,9 @@ def main():
             PROJECT = cfg.wandb_project_name
             wandb.init(
                 project=PROJECT,
-                entity=cfg.wandb_project_entity,
                 name=exp_name,
                 config=cfg.to_dict(),
+                # entity=cfg.wandb_project_entity,
             )
 
     # 2.3. initialize ColossalAI booster

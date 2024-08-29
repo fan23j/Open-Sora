@@ -1,0 +1,209 @@
+{'batch_size': 1,
+ 'bucket_config': {'360p': {4: (1.0, 2)}},
+ 'ckpt_every': 500,
+ 'dataset': {'data_path': '/mnt/mir/fan23j/Open-Sora/data/bball/output_filtered.csv',
+             'frame_interval': 2,
+             'image_size': (None, None),
+             'num_frames': None,
+             'transform_name': 'resize_crop',
+             'type': 'VariableVideoTextDataset'},
+ 'dtype': 'bf16',
+ 'epochs': 1000,
+ 'eval_batch_size': 1,
+ 'eval_fps': 8,
+ 'eval_image_size': (360, 640),
+ 'eval_num_frames': 4,
+ 'eval_prompts': ['A basketball player missing a three-point shot'],
+ 'eval_steps': 500,
+ 'exp_id': '4f-full-ds',
+ 'grad_checkpoint': True,
+ 'grad_clip': 1.0,
+ 'load': None,
+ 'log_every': 10,
+ 'lr': 1e-05,
+ 'lr_schedule': 'cosine_const',
+ 'model': {'enable_flash_attn': False,
+           'enable_layernorm_kernel': False,
+           'from_pretrained': '/mnt/mir/fan23j/Open-Sora/pretrained/OpenSora-STDiT-v2-stage3/model.safetensors',
+           'input_sq_size': 512,
+           'qk_norm': True,
+           'type': 'STDiT2-XL/2'},
+ 'num_bucket_build_workers': 8,
+ 'num_workers': 8,
+ 'outputs': 'outputs',
+ 'plugin': 'zero2',
+ 'scheduler': {'timestep_respacing': '', 'type': 'iddpm'},
+ 'scheduler_inference': {'cfg_channel': 3,
+                         'cfg_scale': 7.0,
+                         'num_sampling_steps': 100,
+                         'type': 'iddpm'},
+ 'seed': 42,
+ 'sp_size': 1,
+ 'vae': {'from_pretrained': 'stabilityai/sd-vae-ft-ema',
+         'local_files_only': False,
+         'micro_batch_size': 4,
+         'type': 'VideoAutoencoderKL'},
+ 'wandb': True,
+ 'wandb_project_entity': 'A New Entity',
+ 'wandb_project_name': 'Structured-Video-Generation',
+ 'warmup_steps': 1}
+wandb: Currently logged in as: levlevi (team-levi). Use `wandb login --relogin` to force relogin
+wandb: wandb version 0.17.8 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.17.7
+wandb: Run data is saved locally in /mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora/wandb/run-20240829_115306-sjpwg1dc
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run 4f-full-ds-STDiT2-XL-2
+wandb: ⭐️ View project at https://wandb.ai/team-levi/Structured-Video-Generation
+wandb: 🚀 View run at https://wandb.ai/team-levi/Structured-Video-Generation/runs/sjpwg1dc
+[extension] Compiling the JIT cpu_adam_x86 kernel during runtime now
+[extension] Time taken to compile cpu_adam_x86 op: 1.3851239681243896 seconds
+[extension] Compiling the JIT fused_optim_cuda kernel during runtime now
+[extension] Time taken to compile fused_optim_cuda op: 1.5164523124694824 seconds
+Training JAMES ⛹️ | Epoch 0:   0%|          | 0/166216 [00:00<?, ?it/s]
+  0%|          | 0/100 [00:00<?, ?it/s][A
+  1%|          | 1/100 [00:00<00:30,  3.25it/s][A
+  2%|▏         | 2/100 [00:00<00:34,  2.81it/s][A
+  3%|▎         | 3/100 [00:01<00:36,  2.69it/s][A
+  4%|▍         | 4/100 [00:01<00:36,  2.64it/s][A
+  5%|▌         | 5/100 [00:01<00:36,  2.61it/s][A
+  6%|▌         | 6/100 [00:02<00:36,  2.58it/s][A
+  7%|▋         | 7/100 [00:02<00:36,  2.57it/s][A
+  8%|▊         | 8/100 [00:03<00:35,  2.57it/s][A
+  9%|▉         | 9/100 [00:03<00:35,  2.57it/s][A
+ 10%|█         | 10/100 [00:03<00:35,  2.56it/s][A
+ 11%|█         | 11/100 [00:04<00:34,  2.56it/s][A
+ 12%|█▏        | 12/100 [00:04<00:34,  2.56it/s][A
+ 13%|█▎        | 13/100 [00:05<00:34,  2.55it/s][A
+ 14%|█▍        | 14/100 [00:05<00:33,  2.55it/s][A
+ 15%|█▌        | 15/100 [00:05<00:33,  2.55it/s][A
+ 16%|█▌        | 16/100 [00:06<00:32,  2.55it/s][A
+ 17%|█▋        | 17/100 [00:06<00:32,  2.55it/s][A
+ 18%|█▊        | 18/100 [00:06<00:32,  2.55it/s][A
+ 19%|█▉        | 19/100 [00:07<00:31,  2.55it/s][A
+ 20%|██        | 20/100 [00:07<00:31,  2.55it/s][A
+ 21%|██        | 21/100 [00:08<00:30,  2.55it/s][A
+ 22%|██▏       | 22/100 [00:08<00:30,  2.55it/s][A
+ 23%|██▎       | 23/100 [00:08<00:30,  2.55it/s][A
+ 24%|██▍       | 24/100 [00:09<00:29,  2.55it/s][A
+ 25%|██▌       | 25/100 [00:09<00:29,  2.55it/s][A
+ 26%|██▌       | 26/100 [00:10<00:29,  2.55it/s][A
+ 27%|██▋       | 27/100 [00:10<00:28,  2.55it/s][A
+ 28%|██▊       | 28/100 [00:10<00:28,  2.55it/s][A
+ 29%|██▉       | 29/100 [00:11<00:27,  2.55it/s][A
+ 30%|███       | 30/100 [00:11<00:27,  2.55it/s][A
+ 31%|███       | 31/100 [00:12<00:27,  2.55it/s][A
+ 32%|███▏      | 32/100 [00:12<00:26,  2.55it/s][A
+ 33%|███▎      | 33/100 [00:12<00:26,  2.54it/s][A
+ 34%|███▍      | 34/100 [00:13<00:25,  2.54it/s][A
+ 35%|███▌      | 35/100 [00:13<00:25,  2.54it/s][A
+ 36%|███▌      | 36/100 [00:14<00:25,  2.54it/s][A
+ 37%|███▋      | 37/100 [00:14<00:24,  2.54it/s][A
+ 38%|███▊      | 38/100 [00:14<00:24,  2.54it/s][A
+ 39%|███▉      | 39/100 [00:15<00:23,  2.54it/s][A
+ 40%|████      | 40/100 [00:15<00:23,  2.54it/s][A
+ 41%|████      | 41/100 [00:16<00:23,  2.55it/s][A
+ 42%|████▏     | 42/100 [00:16<00:22,  2.54it/s][A
+ 43%|████▎     | 43/100 [00:16<00:22,  2.54it/s][A
+ 44%|████▍     | 44/100 [00:17<00:22,  2.54it/s][A
+ 45%|████▌     | 45/100 [00:17<00:21,  2.54it/s][A
+ 46%|████▌     | 46/100 [00:17<00:21,  2.54it/s][A
+ 47%|████▋     | 47/100 [00:18<00:20,  2.54it/s][A
+ 48%|████▊     | 48/100 [00:18<00:20,  2.55it/s][A
+ 49%|████▉     | 49/100 [00:19<00:20,  2.54it/s][A
+ 50%|█████     | 50/100 [00:19<00:19,  2.55it/s][A
+ 51%|█████     | 51/100 [00:19<00:19,  2.54it/s][A
+ 52%|█████▏    | 52/100 [00:20<00:18,  2.55it/s][A
+ 53%|█████▎    | 53/100 [00:20<00:18,  2.55it/s][A
+ 54%|█████▍    | 54/100 [00:21<00:18,  2.54it/s][A
+ 55%|█████▌    | 55/100 [00:21<00:17,  2.54it/s][A
+ 56%|█████▌    | 56/100 [00:21<00:17,  2.54it/s][A
+ 57%|█████▋    | 57/100 [00:22<00:16,  2.55it/s][A
+ 58%|█████▊    | 58/100 [00:22<00:16,  2.55it/s][A
+ 59%|█████▉    | 59/100 [00:23<00:16,  2.55it/s][A
+ 60%|██████    | 60/100 [00:23<00:15,  2.55it/s][A
+ 61%|██████    | 61/100 [00:23<00:15,  2.55it/s][A
+ 62%|██████▏   | 62/100 [00:24<00:14,  2.55it/s][A
+ 63%|██████▎   | 63/100 [00:24<00:14,  2.55it/s][A
+ 64%|██████▍   | 64/100 [00:25<00:14,  2.55it/s][A
+ 65%|██████▌   | 65/100 [00:25<00:13,  2.55it/s][A
+ 66%|██████▌   | 66/100 [00:25<00:13,  2.55it/s][A
+ 67%|██████▋   | 67/100 [00:26<00:12,  2.55it/s][A
+ 68%|██████▊   | 68/100 [00:26<00:12,  2.55it/s][A
+ 69%|██████▉   | 69/100 [00:26<00:12,  2.55it/s][A
+ 70%|███████   | 70/100 [00:27<00:11,  2.55it/s][A
+ 71%|███████   | 71/100 [00:27<00:11,  2.55it/s][A
+ 72%|███████▏  | 72/100 [00:28<00:10,  2.55it/s][A
+ 73%|███████▎  | 73/100 [00:28<00:10,  2.55it/s][A
+ 74%|███████▍  | 74/100 [00:28<00:10,  2.55it/s][A
+ 75%|███████▌  | 75/100 [00:29<00:09,  2.55it/s][A
+ 76%|███████▌  | 76/100 [00:29<00:09,  2.55it/s][A
+ 77%|███████▋  | 77/100 [00:30<00:09,  2.55it/s][A
+ 78%|███████▊  | 78/100 [00:30<00:08,  2.55it/s][A
+ 79%|███████▉  | 79/100 [00:30<00:08,  2.55it/s][A
+ 80%|████████  | 80/100 [00:31<00:07,  2.55it/s][A
+ 81%|████████  | 81/100 [00:31<00:07,  2.55it/s][A
+ 82%|████████▏ | 82/100 [00:32<00:07,  2.55it/s][A
+ 83%|████████▎ | 83/100 [00:32<00:06,  2.55it/s][A
+ 84%|████████▍ | 84/100 [00:32<00:06,  2.55it/s][A
+ 85%|████████▌ | 85/100 [00:33<00:05,  2.55it/s][A
+ 86%|████████▌ | 86/100 [00:33<00:05,  2.55it/s][A
+ 87%|████████▋ | 87/100 [00:34<00:05,  2.55it/s][A
+ 88%|████████▊ | 88/100 [00:34<00:04,  2.55it/s][A
+ 89%|████████▉ | 89/100 [00:34<00:04,  2.55it/s][A
+ 90%|█████████ | 90/100 [00:35<00:03,  2.55it/s][A
+ 91%|█████████ | 91/100 [00:35<00:03,  2.55it/s][A
+ 92%|█████████▏| 92/100 [00:36<00:03,  2.55it/s][A
+ 93%|█████████▎| 93/100 [00:36<00:02,  2.54it/s][A
+ 94%|█████████▍| 94/100 [00:36<00:02,  2.54it/s][A
+ 95%|█████████▌| 95/100 [00:37<00:01,  2.54it/s][A
+ 96%|█████████▌| 96/100 [00:37<00:01,  2.54it/s][A
+ 97%|█████████▋| 97/100 [00:37<00:01,  2.54it/s][A
+ 98%|█████████▊| 98/100 [00:38<00:00,  2.54it/s][A
+ 99%|█████████▉| 99/100 [00:38<00:00,  2.54it/s][A
+100%|██████████| 100/100 [00:39<00:00,  2.54it/s][A100%|██████████| 100/100 [00:39<00:00,  2.55it/s]
+Created directory: outputs/4f-full-ds-STDiT2-XL-2/epoch0-global_step1
+Saved to outputs/4f-full-ds-STDiT2-XL-2/epoch0-global_step1/sample_0.mp4
+/mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora/outputs/4f-full-ds-STDiT2-XL-2/epoch0-global_step1/sample_0.mp4 logged
+Training JAMES ⛹️ | Epoch 0:   0%|          | 1/166216 [00:49<2264:49:15, 49.05s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 2/166216 [00:51<990:15:54, 21.45s/it] Training JAMES ⛹️ | Epoch 0:   0%|          | 3/166216 [00:53<582:35:26, 12.62s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 4/166216 [00:55<391:02:39,  8.47s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 5/166216 [00:57<285:09:01,  6.18s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 6/166216 [00:59<221:15:59,  4.79s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 7/166216 [01:01<180:45:20,  3.92s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 8/166216 [01:03<154:13:42,  3.34s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 9/166216 [01:05<136:29:04,  2.96s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 10/166216 [01:08<124:27:52,  2.70s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 11/166216 [01:10<116:48:31,  2.53s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 12/166216 [01:12<111:13:40,  2.41s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 13/166216 [01:14<107:08:55,  2.32s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 14/166216 [01:16<104:16:20,  2.26s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 15/166216 [01:18<102:19:15,  2.22s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 16/166216 [01:20<101:01:18,  2.19s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 17/166216 [01:22<99:59:18,  2.17s/it] Training JAMES ⛹️ | Epoch 0:   0%|          | 18/166216 [01:25<102:36:33,  2.22s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 19/166216 [01:27<101:11:52,  2.19s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 20/166216 [01:29<100:10:06,  2.17s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 21/166216 [01:31<100:05:09,  2.17s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 22/166216 [01:33<99:21:06,  2.15s/it] Training JAMES ⛹️ | Epoch 0:   0%|          | 23/166216 [01:35<98:52:03,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 24/166216 [01:38<98:32:12,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 25/166216 [01:40<98:20:14,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 26/166216 [01:42<98:09:27,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 27/166216 [01:44<98:04:38,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 28/166216 [01:46<98:02:52,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 29/166216 [01:48<97:59:47,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 30/166216 [01:50<97:59:15,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 31/166216 [01:52<98:48:28,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 32/166216 [01:55<98:32:12,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 33/166216 [01:57<98:25:16,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 34/166216 [01:59<98:19:38,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 35/166216 [02:01<98:12:25,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 36/166216 [02:03<98:09:32,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 37/166216 [02:05<98:06:30,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 38/166216 [02:07<99:09:41,  2.15s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 39/166216 [02:10<98:49:27,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 40/166216 [02:12<98:31:50,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 41/166216 [02:14<98:57:16,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 42/166216 [02:16<98:38:50,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 43/166216 [02:18<98:26:34,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 44/166216 [02:20<98:17:18,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 45/166216 [02:22<98:12:03,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 46/166216 [02:24<98:07:37,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 47/166216 [02:27<98:06:41,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 48/166216 [02:29<98:07:52,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 49/166216 [02:31<98:05:03,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 50/166216 [02:33<98:03:58,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 51/166216 [02:35<98:35:17,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 52/166216 [02:37<98:24:22,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 53/166216 [02:39<98:19:55,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 54/166216 [02:41<98:15:49,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 55/166216 [02:44<98:11:16,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 56/166216 [02:46<98:08:04,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 57/166216 [02:48<98:04:45,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 58/166216 [02:50<98:03:04,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 59/166216 [02:52<98:00:59,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 60/166216 [02:54<97:59:14,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 61/166216 [02:56<98:34:38,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 62/166216 [02:58<98:23:29,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 63/166216 [03:01<98:17:02,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 64/166216 [03:03<101:00:31,  2.19s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 65/166216 [03:05<100:06:23,  2.17s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 66/166216 [03:07<99:26:46,  2.15s/it] Training JAMES ⛹️ | Epoch 0:   0%|          | 67/166216 [03:09<99:01:33,  2.15s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 68/166216 [03:11<98:41:46,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 69/166216 [03:14<98:29:15,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 70/166216 [03:16<98:22:59,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 71/166216 [03:18<98:53:02,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 72/166216 [03:20<98:37:14,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 73/166216 [03:22<98:26:13,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 74/166216 [03:24<98:19:17,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 75/166216 [03:26<98:13:20,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 76/166216 [03:28<98:10:42,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 77/166216 [03:31<98:10:18,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 78/166216 [03:33<98:08:32,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 79/166216 [03:35<98:07:35,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 80/166216 [03:37<98:05:48,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 81/166216 [03:39<98:39:37,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 82/166216 [03:41<98:26:12,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 83/166216 [03:43<98:16:14,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 84/166216 [03:45<98:13:06,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 85/166216 [03:48<98:08:16,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 86/166216 [03:50<98:05:14,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 87/166216 [03:52<98:10:13,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 88/166216 [03:54<98:07:28,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 89/166216 [03:56<98:05:49,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 90/166216 [03:58<98:04:47,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 91/166216 [04:00<98:38:28,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 92/166216 [04:03<98:26:06,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 93/166216 [04:05<98:21:04,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 94/166216 [04:07<98:14:44,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 95/166216 [04:09<98:14:47,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 96/166216 [04:11<98:10:37,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 97/166216 [04:13<98:09:29,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 98/166216 [04:15<98:05:20,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 99/166216 [04:17<98:03:39,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 100/166216 [04:20<98:03:23,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 101/166216 [04:22<98:37:42,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 102/166216 [04:24<98:27:04,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 103/166216 [04:26<98:21:04,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 104/166216 [04:28<98:16:24,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 105/166216 [04:30<101:34:43,  2.20s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 106/166216 [04:33<100:29:03,  2.18s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 107/166216 [04:35<101:42:29,  2.20s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 108/166216 [04:37<100:36:11,  2.18s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 109/166216 [04:39<99:51:50,  2.16s/it] Training JAMES ⛹️ | Epoch 0:   0%|          | 110/166216 [04:41<99:17:33,  2.15s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 111/166216 [04:43<99:30:13,  2.16s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 112/166216 [04:45<99:03:29,  2.15s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 113/166216 [04:48<98:44:49,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 114/166216 [04:50<98:31:58,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 115/166216 [04:52<98:22:52,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 116/166216 [04:54<98:16:12,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 117/166216 [04:56<98:37:10,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 118/166216 [04:58<98:25:02,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 119/166216 [05:00<98:17:24,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 120/166216 [05:03<98:09:53,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 121/166216 [05:05<98:41:53,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 122/166216 [05:07<98:27:55,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 123/166216 [05:09<98:18:37,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 124/166216 [05:11<98:14:11,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 125/166216 [05:13<98:11:09,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 126/166216 [05:15<98:10:01,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 127/166216 [05:17<98:07:15,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 128/166216 [05:20<98:03:05,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 129/166216 [05:22<98:04:28,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 130/166216 [05:24<98:01:05,  2.12s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 131/166216 [05:26<98:38:38,  2.14s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 132/166216 [05:28<98:26:39,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 133/166216 [05:30<98:17:11,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 134/166216 [05:32<98:15:03,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 135/166216 [05:34<98:12:09,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 136/166216 [05:37<98:10:56,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 137/166216 [05:39<98:06:48,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 138/166216 [05:41<98:07:20,  2.13s/it]Training JAMES ⛹️ | Epoch 0:   0%|          | 139/166216 [05:43<98:07:26,  2.13s/it]W0829 11:59:17.974069 140024944392000 torch/distributed/elastic/multiprocessing/api.py:851] Sending process 1554937 closing signal SIGTERM
+Traceback (most recent call last):
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/agent/server/api.py", line 733, in run
+    result = self._invoke_run(role)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/agent/server/api.py", line 876, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 76, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 1554884 got signal: 1
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/bin/torchrun", line 10, in <module>
+    sys.exit(main())
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 347, in wrapper
+    return f(*args, **kwargs)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/run.py", line 879, in main
+    run(args)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/run.py", line 870, in run
+    elastic_launch(
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/launcher/api.py", line 132, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/launcher/api.py", line 254, in launch_agent
+    result = agent.run()
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/metrics/api.py", line 123, in wrapper
+    result = f(*args, **kwargs)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/agent/server/api.py", line 741, in run
+    log.warning("Received %s death signal, shutting down workers", e.sigval)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/logging/__init__.py", line 1458, in warning
+    self._log(WARNING, msg, args, **kwargs)
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/logging/__init__.py", line 1587, in _log
+    record = self.makeRecord(self.name, level, fn, lno, msg, args,
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/logging/__init__.py", line 1556, in makeRecord
+    rv = _logRecordFactory(name, level, fn, lno, msg, args, exc_info, func,
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/logging/__init__.py", line 331, in __init__
+    self.threadName = threading.current_thread().name
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/threading.py", line 1101, in name
+    assert self._initialized, "Thread.__init__() not called"
+  File "/playpen-storage/levlevi/anaconda3/envs/op-2/lib/python3.9/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 76, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 1554884 got signal: 1

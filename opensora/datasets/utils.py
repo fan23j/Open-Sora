@@ -150,8 +150,8 @@ def save_sample(x, fps=8, save_path=None, normalize=True, value_range=(-1, 1), f
     Args:
         x (Tensor): shape [C, T, H, W]
     """
+    
     assert x.ndim == 4
-
     if not force_video and x.shape[1] == 1:  # T = 1: save as image
         save_path += ".png"
         x = x.squeeze(1)

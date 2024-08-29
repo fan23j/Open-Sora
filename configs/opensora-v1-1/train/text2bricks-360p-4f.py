@@ -59,7 +59,7 @@ scheduler_inference = dict(
 # misc
 seed = 42
 outputs = "outputs"
-wandb = False
+wandb = True
 
 epochs = 1000
 log_every = 10
@@ -82,6 +82,6 @@ eval_fps = 8
 eval_batch_size = 1
 eval_steps = ckpt_every
 
-wandb_project_name = "STDiT-Motion"
-wandb_project_entity = "Video-Generation-For-Structured-Behavior-Modeling"
-exp_id = "multi_traj_unaligned"
+wandb_project_name = "Structured-Video-Generation"
+wandb_project_entity = "A New Entity"
+exp_id = "4f-full-ds"
