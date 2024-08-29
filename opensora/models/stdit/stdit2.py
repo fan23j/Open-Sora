@@ -111,7 +111,7 @@ class STDiT2Block(nn.Module):
             ).chunk(3, dim=1)
 
         # inject conditions
-        x = self.bbox_cross_attn(x, conditions['bbox_ratios'])
+        x = self.bbox_cross_attn(x, conditions['bbox_features'])
 
         # modulate
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
@@ -150,7 +150,7 @@ class STDiT2Block(nn.Module):
         x = x + self.drop_path(x_t)
     
         # inject conditions
-        x = self.cross_attn(x, conditions['text'])
+        x = self.cross_attn(x, conditions['text_embeddings'])
 
         # modulate
         x_m = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -382,6 +382,9 @@ class STDiT2(PreTrainedModel):
             t0_tmp_mlp = None
 
         # prepare y
+        if conditions.get('text') is None:
+            # inference
+            conditions['text'] = ["A basketball player missing a three-point shot"]
         y, mask = get_embeddings_for_prompts(conditions['text'], self.text_embeddings['y'], self.text_embeddings['mask'])
         y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
 
@@ -394,9 +397,14 @@ class STDiT2(PreTrainedModel):
         else:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
-        
-        conditions = self.james(conditions)
-        conditions['text'] = y
+
+        processed_conditions = self.james(conditions.copy())  # Use a copy of the input conditions
+        processed_conditions['text_embeddings'] = y
+
+        # Ensure all tensors in processed_conditions are detached
+        processed_conditions = {k: v.detach() if isinstance(v, torch.Tensor) else v 
+                            for k, v in processed_conditions.items()}
+
         # blocks
         for _, block in enumerate(self.blocks):
             x = auto_grad_checkpoint(
@@ -410,7 +418,7 @@ class STDiT2(PreTrainedModel):
                 T,
                 S,
                 mask,
-                conditions,
+                processed_conditions,
             )
             # x.shape: [B, N, C]
 

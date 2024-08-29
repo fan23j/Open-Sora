@@ -250,7 +250,7 @@ def write_sample(model, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype,
 
             samples = []
 
-            conditions = torch.load('instance_trajs.pth')
+            conditions = torch.load('/mnt/mir/fan23j/data/nba-plus-statvu-dataset/__scripts__/conditions.pth')
 
             #transfer conditions to gpu
             for key in conditions:

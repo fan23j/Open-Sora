@@ -280,7 +280,7 @@ action_to_index = {action: i for i, action in enumerate(basketball_actions)}
 
 def get_embeddings_for_prompts(prompts, embeddings, mask):
     device = embeddings.device  # Get the device of the embeddings tensor
-    
+
     # Convert list of prompts to indices
     indices = np.array([action_to_index[prompt] for prompt in prompts])
     assert len(indices) == len(prompts), f"Not all prompts found in action_to_index. Missing: {set(prompts) - set(action_to_index.keys())}"

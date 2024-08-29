@@ -18,7 +18,7 @@ class JAMES(nn.Module):
     #TODO: do better.
     def forward(self, conditions, **kwargs):
         bbox_features = self.multi_traj_adapter(conditions["bbox_ratios"])
-        conditions["bbox_ratios"] = bbox_features
+        conditions["bbox_features"] = bbox_features
         return conditions
 
 
