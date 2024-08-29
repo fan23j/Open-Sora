@@ -86,7 +86,6 @@ def process_batch(
     dtype: torch.dtype,
 ):
     """
-
     :params:
     :batch: Dict = {
         "video": video,
@@ -100,7 +99,6 @@ def process_batch(
     }
     """
 
-    breakpoint()
     x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
     y = batch.pop("text")
 
@@ -126,6 +124,7 @@ def process_batch(
     )
 
     # predict noise: () and calculate loss
+    # 10GB -> 35GB
     loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
     return loss_dict
 
@@ -147,7 +146,7 @@ def compute_and_apply_gradients(
     if lr_scheduler is not None:
         lr_scheduler.step()
     if ema is not None and model is not None:
-        update_ema(ema, model.module, optimizer=optimizer)
+        update_ema(ema, model, optimizer=optimizer)
 
 
 def save_checkpoint_if_needed(
@@ -231,7 +230,7 @@ def train(
 
         with tqdm(
             iterable=enumerate(dataloader_iter, start=0),
-            desc=f"Training JAMES ⛹️ | Epoch {epoch}",
+            desc=f"Training JAMES | Epoch {epoch}",
             disable=not coordinator.is_master(),
             total=num_steps_per_epoch,
         ) as pbar:
@@ -247,15 +246,15 @@ def train(
                 )
                 loss = loss_dict["loss"].mean()
 
-                # Compute and apply gradients
+                # compute and apply gradients
                 compute_and_apply_gradients(
                     loss, booster, optimizer, lr_scheduler, ema, model
                 )
 
-                # Logging
+                # logging
                 global_step = epoch * num_steps_per_epoch + step
-                running_loss += loss.item()
                 iteration_times.append(time.time() - start_time)
+                running_loss += loss.item()
                 log_step += 1
                 acc_step += 1
 
@@ -275,7 +274,7 @@ def train(
                     acc_step,
                 )
 
-                # Save checkpoint if needed
+                # save checkpoint if needed
                 save_checkpoint_if_needed(
                     cfg,
                     global_step,
@@ -292,7 +291,7 @@ def train(
                     sampler_to_io,
                 )
 
-                # Evaluate and save samples if needed
+                # evaluate and save samples if needed
                 if global_step % cfg.eval_steps == 0:
                     write_sample(
                         model,
@@ -309,7 +308,7 @@ def train(
                         coordinator.is_master(), cfg, epoch, exp_dir, global_step
                     )
 
-        # Finalize the epoch
+        # finalize the epoch
         finalize_epoch(cfg, dataloader, epoch)
 
 

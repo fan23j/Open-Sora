@@ -8,7 +8,7 @@ dataset = dict(
     transform_name="resize_crop",
 )
 bucket_config = {
-    "360p": {64: (1.0, 2)},
+    "360p": {4: (1.0, 2)},
 }
 mask_ratios = {
     "mask_no": 0.75,
@@ -78,7 +78,7 @@ eval_prompts = [
 ]
 
 eval_image_size = (360, 640)
-eval_num_frames = 64
+eval_num_frames = 4
 eval_fps = 8
 eval_batch_size = 1
 eval_steps = ckpt_every

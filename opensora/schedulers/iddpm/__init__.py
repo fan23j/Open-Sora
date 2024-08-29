@@ -1,9 +1,7 @@
-from functools import partial
-
 import torch
 
+from functools import partial
 from opensora.registry import SCHEDULERS
-
 from . import gaussian_diffusion as gd
 from .respace import SpacedDiffusion, space_timesteps
 from .speed import SpeeDiffusion

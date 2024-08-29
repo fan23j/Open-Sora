@@ -57,11 +57,12 @@ class MultiTrajEncoder(nn.Module):
         """
         TODO: what is the expected shape of x?
 
-        x: [64, 10, (2, 4)] -> (64, 10, 2, 4)
+        x: [4, 10, (2, 4)] -> (4, 10, 2, 4)
         """
-
+        
         # HACK: this god awful line converts a list[tensor[4, 2] -> tensor[1, 10, 4, 2]
-        x = torch.stack([torch.stack(_x) for _x in x])
+        if type(x) is list:
+            x = torch.stack([torch.stack(_x) for _x in x])
 
         # x shape: [batch_size, num_instances, num_frames, 4]
         batch_size, num_instances, num_frames, _ = x.shape

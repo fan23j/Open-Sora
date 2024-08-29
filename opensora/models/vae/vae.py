@@ -8,7 +8,13 @@ from opensora.registry import MODELS
 
 @MODELS.register_module()
 class VideoAutoencoderKL(nn.Module):
-    def __init__(self, from_pretrained=None, micro_batch_size=None, cache_dir=None, local_files_only=False):
+    def __init__(
+        self,
+        from_pretrained=None,
+        micro_batch_size=None,
+        cache_dir=None,
+        local_files_only=False,
+    ):
         super().__init__()
         self.module = AutoencoderKL.from_pretrained(
             from_pretrained, cache_dir=cache_dir, local_files_only=local_files_only
@@ -58,7 +64,11 @@ class VideoAutoencoderKL(nn.Module):
             # assert (
             #     input_size[i] is None or input_size[i] % self.patch_size[i] == 0
             # ), "Input size must be divisible by patch size"
-            latent_size.append(input_size[i] // self.patch_size[i] if input_size[i] is not None else None)
+            latent_size.append(
+                input_size[i] // self.patch_size[i]
+                if input_size[i] is not None
+                else None
+            )
         return latent_size
 
     @property
@@ -96,7 +106,11 @@ class VideoAutoencoderKLTemporalDecoder(nn.Module):
             # assert (
             #     input_size[i] is None or input_size[i] % self.patch_size[i] == 0
             # ), "Input size must be divisible by patch size"
-            latent_size.append(input_size[i] // self.patch_size[i] if input_size[i] is not None else None)
+            latent_size.append(
+                input_size[i] // self.patch_size[i]
+                if input_size[i] is not None
+                else None
+            )
         return latent_size
 
     @property

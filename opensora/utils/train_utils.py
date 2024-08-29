@@ -1,8 +1,10 @@
 import math
 import random
 import torch
+import wandb
 
 from collections import OrderedDict
+from opensora.utils.model_helpers import calculate_weight_norm, push_to_device
 
 
 def log_progress(logger, coordinator, global_step, cfg, writer, loss, running_loss, log_step, model, iteration_times, optimizer, epoch, acc_step):
@@ -36,13 +38,14 @@ def log_progress(logger, coordinator, global_step, cfg, writer, loss, running_lo
 def update_ema(
     ema_model: torch.nn.Module,
     model: torch.nn.Module,
-    optimizer=None,
+    optimizer: torch.optim.Optimizer=None,
     decay: float = 0.9999,
     sharded: bool = True,
 ) -> None:
     """
     Step the EMA model towards the current model.
     """
+    
     ema_params = OrderedDict(ema_model.named_parameters())
     model_params = OrderedDict(model.named_parameters())
 
@@ -55,9 +58,11 @@ def update_ema(
             param_data = param.data
             ema_params[name].mul_(decay).add_(param_data, alpha=1 - decay)
         else:
+            # HACK
+            continue
             if param.data.dtype != torch.float32:
                 param_id = id(param)
-                master_param = optimizer.working_to_master_param[param_id]
+                master_param = optimizer .working_to_master_param[param_id]
                 # master_param = optimizer._param_group.working_to_master_param[param_id]
                 param_data = master_param.data
             else:

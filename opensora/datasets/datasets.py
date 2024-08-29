@@ -25,7 +25,7 @@ from .utils import (
 
 IMG_FPS = 120
 DATASET_DIR = (
-    "/mnt/mir/levlevi/nba-plus-statvu-dataset/filtered-clip-annotations-40-bbx-ratios"
+    "/playpen-storage/levlevi/nba-plus-statvu-dataset/filtered-clip-annotations-40-bbx-ratios"
 )
 TYPE_VIDEO = "video"
 TYPE_IMAGE = "image"
@@ -132,7 +132,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
 
         num_frames: int = index.num_frames
         height, width = index.height, index.width
-        video_path = self.clip_annotation.video_path
+        video_path = self.ann_wrapper.video_fp
         text: str = self.clip_annotation.video_info.caption
         ar: float = height / width
         video_fps: int = self.clip_annotation.video_info.video_fps

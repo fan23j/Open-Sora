@@ -59,15 +59,16 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
         Place samples into buckets containing similar resolution / # frames.
         TODO: we place all samples into the same bucket for now.
         """
-
-        # HACK: hard-coding buckets for now
+        
         assert (
             type(self.dataset) is NBAClipsDataset
         ), f"Error: dataset.ann is {type(self.dataset)}"
+        
+        # HACK: hard-coding buckets for now
         bucket_sample_dict = {
             (
                 "360p",
-                64,
+                4,
                 "1.00",
             ): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths[:100]
         }
