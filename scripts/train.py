@@ -606,11 +606,11 @@ def main():
 
                 # Backward & update
                 loss = loss_dict["loss"].mean()
-                loss.backward(retain_graph=True)
+                #loss.backward(retain_graph=True)
                 # def hook(grad):
                 #     return grad
                 # loss.register_hook(hook)
-                # booster.backward(loss=loss, optimizer=optimizer)
+                booster.backward(loss=loss, optimizer=optimizer)
                 optimizer.step()
                 optimizer.zero_grad()
                 if lr_scheduler is not None:
