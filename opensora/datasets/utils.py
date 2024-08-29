@@ -234,14 +234,66 @@ def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
     
     # Reshape into [num_instances, len(frame_indices), 4]
     num_frames = len(frame_indices)
-    return torch.tensor(extracted_values).reshape(num_instances, num_frames, 4)
+    extracted_values_array = np.array(extracted_values)
+    return torch.from_numpy(extracted_values_array).reshape(num_instances, num_frames, 4)
 
 def extract_conditions(sample, frame_indices):
     conditions = {}
-    if "player_trajectories" in sample:
-        conditions["bbox_ratios"] = bounding_box_string_to_tensor(
-            sample["player_trajectories"], 
-            frame_indices
-        )
+    conditions["bbox_ratios"] = bounding_box_string_to_tensor(
+        sample["bbox_ratios"], 
+        frame_indices
+    )
+    conditions["text"] = sample["text"]
     
     return conditions
+
+basketball_actions = [
+    "A basketball player missing a three-point shot",
+    "A basketball player assisting on a play",
+    "A basketball player setting a screen",
+    "A basketball player grabbing a rebound",
+    "A basketball player committing a turnover",
+    "A basketball player making a free throw",
+    "A basketball player missing a free throw",
+    "A basketball player scoring and being fouled",
+    "A basketball player missing a two-point shot",
+    "A basketball player making a two-point shot",
+    "A basketball player committing a foul",
+    "A basketball player executing a pick and roll",
+    "A basketball player posting up",
+    "A basketball player stealing the ball",
+    "A basketball player receiving a technical foul",
+    "A basketball player making a three-point shot",
+    "A basketball player committing their second foul",
+    "A basketball player committing their third foul",
+    "A basketball player committing an unsportsmanlike foul",
+    "A basketball player making a three-pointer and being fouled",
+    "A basketball player getting a second chance opportunity",
+    "A basketball player making two free throws",
+    "A basketball player missing two free throws",
+    "A basketball player making three free throws",
+    "A basketball player missing three free throws",
+    "A basketball player committing a disqualifying foul"
+]
+
+action_to_index = {action: i for i, action in enumerate(basketball_actions)}
+
+def get_embeddings_for_prompts(prompts, embeddings, mask):
+    device = embeddings.device  # Get the device of the embeddings tensor
+    
+    # Convert list of prompts to indices
+    indices = np.array([action_to_index[prompt] for prompt in prompts])
+    assert len(indices) == len(prompts), f"Not all prompts found in action_to_index. Missing: {set(prompts) - set(action_to_index.keys())}"
+    
+    # Convert indices to a torch tensor on the correct device
+    indices_tensor = torch.from_numpy(indices).to(device)
+    
+    # Use index_select with the device-specific indices
+    filtered_embeddings = torch.index_select(embeddings, 0, indices_tensor)
+    filtered_y_null = embeddings[26].unsqueeze(0).expand(len(prompts), -1, -1, -1)
+    filtered_mask = torch.index_select(mask, 0, indices_tensor)
+    
+    # Concatenate along the first dimension
+    combined_embeddings = torch.cat([filtered_embeddings, filtered_y_null], dim=0)
+    
+    return combined_embeddings, filtered_mask

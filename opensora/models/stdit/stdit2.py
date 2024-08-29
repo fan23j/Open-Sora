@@ -25,6 +25,7 @@ from opensora.models.layers.blocks import (
 from opensora.registry import MODELS
 from transformers import PretrainedConfig, PreTrainedModel
 from opensora.utils.ckpt_utils import load_checkpoint
+from opensora.datasets.utils import get_embeddings_for_prompts
 from opensora.models.james import JAMES
 
 
@@ -40,7 +41,6 @@ class STDiT2Block(nn.Module):
         enable_sequence_parallelism=False,
         rope=None,
         qk_norm=False,
-        y_embedder=None,
     ):
         super().__init__()
         self.hidden_size = hidden_size
@@ -58,11 +58,11 @@ class STDiT2Block(nn.Module):
         )
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
-        # injection module
-        self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads, y_embedder=y_embedder)
+        # cross attn (text)
+        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
-        # cross attn
-        # self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
+        # bbox cross attn
+        self.bbox_cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # mlp branch
         self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
@@ -111,7 +111,7 @@ class STDiT2Block(nn.Module):
             ).chunk(3, dim=1)
 
         # inject conditions
-        x = self.james(x, conditions, inject_bbox=False)
+        x = self.bbox_cross_attn(x, conditions['bbox_ratios'])
 
         # modulate
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
@@ -150,7 +150,7 @@ class STDiT2Block(nn.Module):
         x = x + self.drop_path(x_t)
     
         # inject conditions
-        x = self.james(x, conditions, inject_text=True)
+        x = self.cross_attn(x, conditions['text'])
 
         # modulate
         x_m = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -256,6 +256,13 @@ class STDiT2(PreTrainedModel):
             act_layer=approx_gelu,
             token_num=config.model_max_length,
         )
+        self.text_embeddings = torch.load('/mnt/mir/fan23j/data/nba-plus-statvu-dataset/__scripts__/text_embeddings_bfloat16.pth')
+        # transfer text embeddings to cuda
+        for k, v in self.text_embeddings.items():
+            self.text_embeddings[k] = v.cuda().detach().requires_grad_(False)
+
+        # condition module
+        self.james = JAMES(ca_hidden_size=config.hidden_size, ca_num_heads=config.num_heads)
 
         drop_path = [x.item() for x in torch.linspace(0, config.drop_path, config.depth)]
         self.rope = RotaryEmbedding(dim=self.hidden_size // self.num_heads)  # new
@@ -270,7 +277,6 @@ class STDiT2(PreTrainedModel):
                     enable_layernorm_kernel=self.enable_layernorm_kernel,
                     rope=self.rope.rotate_queries_or_keys,
                     qk_norm=config.qk_norm,
-                    y_embedder=self.y_embedder,
                 )
                 for i in range(self.depth)
             ]
@@ -375,6 +381,22 @@ class STDiT2(PreTrainedModel):
             t0_spc_mlp = None
             t0_tmp_mlp = None
 
+        # prepare y
+        y, mask = get_embeddings_for_prompts(conditions['text'], self.text_embeddings['y'], self.text_embeddings['mask'])
+        y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
+
+        if mask is not None:
+            if mask.shape[0] != y.shape[0]:
+                mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
+            mask = mask.squeeze(1).squeeze(1)
+            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+            y_lens = mask.sum(dim=1).tolist()
+        else:
+            y_lens = [y.shape[2]] * y.shape[0]
+            y = y.squeeze(1).view(1, -1, x.shape[-1])
+        
+        conditions = self.james(conditions)
+        conditions['text'] = y
         # blocks
         for _, block in enumerate(self.blocks):
             x = auto_grad_checkpoint(

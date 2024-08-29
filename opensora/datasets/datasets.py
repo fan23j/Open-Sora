@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torchvision
 from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
-
+import re
 from opensora.registry import DATASETS
 
 from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop, extract_conditions
