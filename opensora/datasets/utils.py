@@ -225,7 +225,7 @@ def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
     bbox_values = eval(bbox_string, {"array": np.array})
     
     # Calculate the total number of frames in the original data
-    total_frames = len(bbox_values) // (num_instances * 4)
+    total_frames = len(bbox_values)
     
     # Extract only the specified frames
     extracted_values = []
@@ -243,6 +243,7 @@ def extract_conditions(sample, frame_indices):
         sample["bbox_ratios"], 
         frame_indices
     )
+
     conditions["text"] = sample["text"]
     
     return conditions
