@@ -126,6 +126,7 @@ def process_batch(
     # predict noise: () and calculate loss
     # 10GB -> 35GB
     loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
+    pprint(loss_dict)
     return loss_dict
 
 
@@ -474,12 +475,12 @@ def main():
 
     # boost model, optimizer, lr_scheduler, dataloader
     # TODO: boosting model raises mem usage 8.5 -> 14.1 GB
-    # model, optimizer, _, dataloader, lr_scheduler = booster.boost(
-    #     model=model,
-    #     optimizer=optimizer,
-    #     lr_scheduler=lr_scheduler,
-    #     dataloader=dataloader,
-    # )
+    model, optimizer, _, dataloader, lr_scheduler = booster.boost(
+        model=model,
+        optimizer=optimizer,
+        lr_scheduler=lr_scheduler,
+        dataloader=dataloader,
+    )
 
     torch.set_default_dtype(torch.float)
     logger.info("Boost model for distributed training")
