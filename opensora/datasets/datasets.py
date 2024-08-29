@@ -60,7 +60,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         image_size: Tuple[int, int] = (256, 256),
         transform_name: Optional[str] = "center",
     ):
-        
+
         # breakpoint()
         # dataset wrapper
         self.filtered_dataset = FilteredClipDataset(DATASET_DIR)
@@ -69,32 +69,34 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         self.annotation_file_paths: List[str] = (
             self.filtered_dataset.filtered_clip_annotations_file_paths
         )
-        self.annotation_file_paths: List[str] = self.annotation_file_paths[:1]
-        
+        self.annotation_file_paths: List[str] = self.annotation_file_paths[:100]
+
         # wrapper for the current sample
         self.ann_wrapper: ClipAnnotationWrapper = ClipAnnotationWrapper(
             self.annotation_file_paths[0], load_clip_annotation=True
         )
-        
+
         # clip annotation object
         self.clip_annotation: ClipAnnotation = self.ann_wrapper.clip_annotation
 
         # number of frames in each generated video
         self.num_frames: int = num_frames
-        
+
         # sample rate / step size
         self.frame_interval: int = frame_interval
-        
+
         # resolution of output videos
         self.image_size: Tuple[int, int] = image_size
-        
+
         # MARK: we only support videos
-        self.transform = get_transforms_video(transform_name, image_size)
+        self.transform: str = transform_name
+
         # breakpoint()
-        
         # TODO: this is pretty janky
         # (T, 10)
-        self.bbxs: List[List[BoundingBox]] = [frame.bbox for frame in self.clip_annotation.frames]
+        self.bbxs: List[List[BoundingBox]] = [
+            frame.bbox for frame in self.clip_annotation.frames
+        ]
         bbx_ratios = []
         for bbx_arr in self.bbxs:
             ratios_arr = []
@@ -105,28 +107,29 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         self.bbx_ratios: List[List[np.ndarray]] = bbx_ratios
 
     def load_annotation(self, index: int) -> None:
-        
-        assert index < len(self.annotation_file_paths) and index >= 0, f"Error: index {index} out of range"
+
+        assert (
+            index < len(self.annotation_file_paths) and index >= 0
+        ), f"Error: index {index} out of range"
         fp = self.annotation_file_paths[index]
         self.ann_wrapper = ClipAnnotationWrapper(fp, load_clip_annotation=True)
 
         # try again if we encounter a bad video
         if self.ann_wrapper.clip_annotation.video_path is None:
             self.load_annotation(index + 1)
-        
+
         # update the current clip annotation obj
         self.clip_annotation = self.ann_wrapper.clip_annotation
-        
 
     def __getitem__(self, index: MicroBatch) -> Dict:
         """
         Returns a single sample (i.e., video clip and related data)
         """
-        
+
         # load the next valid annotation object
         sample_index: int = index.index
         self.load_annotation(sample_index)
-        
+
         num_frames: int = index.num_frames
         height, width = index.height, index.width
         video_path = self.clip_annotation.video_path
@@ -140,18 +143,22 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         )
         if "video_fps" in infos:
             video_fps = infos["video_fps"]
-            
+
         # take a random temporal crop from video of `num_frames` spaced by `frame_interval`
-        video, frame_indices = temporal_random_crop(vframes, num_frames, self.frame_interval)
-        
+        video, frame_indices = temporal_random_crop(
+            vframes, num_frames, self.frame_interval
+        )
+
         # select the corresponding bbx rations
         frame_indices_set = set(frame_indices)
-        selected_bbxs = [bbx for idx, bbx in enumerate(self.bbxs) if idx in frame_indices_set]
+        selected_bbxs = [
+            bbx for idx, bbx in enumerate(self.bbx_ratios) if idx in frame_indices_set
+        ]
         assert type(sample_index) == int, f"{sample_index}"
         conditions = {
             "bbox_ratios": selected_bbxs,
         }
-        
+
         # transform
         transform = get_transforms_video(self.transform, (height, width))
         video = transform(video)  # T C H W

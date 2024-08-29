@@ -1,13 +1,13 @@
 import functools
 import json
 import logging
-import operator
 import os
-from typing import Tuple
-
+import operator
 import torch
-import torch.distributed as dist
 import torch.nn as nn
+import torch.distributed as dist
+
+from typing import Tuple
 from colossalai.booster import Booster
 from colossalai.checkpoint_io import GeneralCheckpointIO
 from colossalai.cluster import DistCoordinator

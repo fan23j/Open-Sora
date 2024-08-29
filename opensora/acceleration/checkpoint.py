@@ -4,7 +4,12 @@ import torch.nn as nn
 from torch.utils.checkpoint import checkpoint, checkpoint_sequential
 
 
-def set_grad_checkpoint(model, use_fp32_attention=False, gc_step=1):
+def set_grad_checkpoint(model, use_fp32_attention=False, gc_step=1) -> None:
+    """
+    Trade compute for memory by enabling gradient checkpointing.
+    https://pytorch.org/docs/2.0/checkpoint.html?highlight=checkpoint#torch.utils.checkpoint.checkpoint
+    """
+
     assert isinstance(model, nn.Module)
 
     def set_attr(module):

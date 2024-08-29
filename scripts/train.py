@@ -88,7 +88,7 @@ def process_batch(
     """
 
     :params:
-    batch: Dict = {
+    :batch: Dict = {
         "video": video,
         "text": text,
         "num_frames": num_frames,
@@ -100,23 +100,24 @@ def process_batch(
     }
     """
 
+    breakpoint()
     x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
     y = batch.pop("text")
 
-    # Calculate visual and text encoding
+    # calculate visual and text encoding
     with torch.no_grad():
         model_args = dict()
         x = vae.encode(x)  # [B, C, T, H/P, W/P]
 
-    # Generate masks
+    # generate masks
     mask = mask_generator.get_masks(x)
     model_args["x_mask"] = mask
 
-    # Process additional batch items
+    # process additional batch items
     for k, v in batch.items():
         model_args[k] = push_to_device(v, device=device, dtype=dtype)
 
-    # Diffusion step
+    # diffusion step
     t = torch.randint(
         low=0,
         high=scheduler.num_timesteps,
@@ -137,7 +138,10 @@ def compute_and_apply_gradients(
     ema=None,
     model=None,
 ):
-    booster.backward(loss=loss, optimizer=optimizer)
+
+    # TODO: we will try using the standard `backward` func
+    # booster.backward(loss=loss, optimizer=optimizer)
+    loss.backward()
     optimizer.step()
     optimizer.zero_grad()
     if lr_scheduler is not None:
@@ -227,16 +231,17 @@ def train(
 
         with tqdm(
             iterable=enumerate(dataloader_iter, start=0),
-            desc=f"Epoch {epoch}",
+            desc=f"Training JAMES ⛹️ | Epoch {epoch}",
             disable=not coordinator.is_master(),
             total=num_steps_per_epoch,
         ) as pbar:
-            iteration_times = []
 
+            iteration_times = []
             for step, batch in pbar:
                 start_time = time.time()
 
-                # Process the batch
+                # mem: 8.6s GB
+                # process the batch
                 loss_dict = process_batch(
                     batch, vae, model, scheduler, mask_generator, device, dtype
                 )
@@ -250,9 +255,9 @@ def train(
                 # Logging
                 global_step = epoch * num_steps_per_epoch + step
                 running_loss += loss.item()
+                iteration_times.append(time.time() - start_time)
                 log_step += 1
                 acc_step += 1
-                iteration_times.append(time.time() - start_time)
 
                 running_loss, log_step = log_progress(
                     logger,
@@ -388,6 +393,7 @@ def main():
         pin_memory=True,
         process_group=get_data_parallel_group(),
     )
+
     # TODO: use plugin's prepare dataloader
     dataloader = prepare_variable_dataloader(
         bucket_config=cfg.bucket_config,
@@ -431,7 +437,7 @@ def main():
     requires_grad(ema, False)
     ema_shape_dict: Dict = record_model_param_shape(ema)
 
-    # 4.3. move to device
+    # ~8.5 GB used at this stage
     vae = vae.to(device, dtype)
     model = model.to(device, dtype)
 
@@ -469,12 +475,14 @@ def main():
     torch.set_default_dtype(dtype)
 
     # boost model, optimizer, lr_scheduler, dataloader
-    model, optimizer, _, dataloader, lr_scheduler = booster.boost(
-        model=model,
-        optimizer=optimizer,
-        lr_scheduler=lr_scheduler,
-        dataloader=dataloader,
-    )
+    # TODO: boosting model raises mem usage 8.5 -> 14.1 GB
+    # model, optimizer, _, dataloader, lr_scheduler = booster.boost(
+    #     model=model,
+    #     optimizer=optimizer,
+    #     lr_scheduler=lr_scheduler,
+    #     dataloader=dataloader,
+    # )
+
     torch.set_default_dtype(torch.float)
     logger.info("Boost model for distributed training")
 
@@ -487,8 +495,8 @@ def main():
     # =======================================================
     # 6. training loop
     # =======================================================
-    start_epoch = start_step = log_step = sampler_start_idx = acc_step = 0
-    sampler_to_io: NBAClipsDataset = dataloader.batch_sampler
+    start_epoch = 0
+    sampler_to_io = dataloader.batch_sampler
     assert type(sampler_to_io) is VariableNBAClipsBatchSampler
     logger.info(
         f"Training for {cfg.epochs} epochs with {num_steps_per_epoch} steps per epoch"

@@ -14,6 +14,7 @@ from .datasets import NBAClipsDataset
 
 HARD_CODED_NUM_BATCHES = 1
 
+
 def apply(data, method=None, frame_interval=None, seed=None, num_bucket=None):
     return method(
         data["num_frames"],
@@ -58,10 +59,18 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
         Place samples into buckets containing similar resolution / # frames.
         TODO: we place all samples into the same bucket for now.
         """
-        
+
         # HACK: hard-coding buckets for now
-        assert type(self.dataset) is NBAClipsDataset, f"Error: dataset.ann is {type(self.dataset)}"
-        bucket_sample_dict = {('360p', 64, '1.00'): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths[:100]}
+        assert (
+            type(self.dataset) is NBAClipsDataset
+        ), f"Error: dataset.ann is {type(self.dataset)}"
+        bucket_sample_dict = {
+            (
+                "360p",
+                64,
+                "1.00",
+            ): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths[:100]
+        }
         return bucket_sample_dict
 
     def get_num_batch(self) -> int:
@@ -182,7 +191,8 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
             real_t, real_h, real_w = self.bucket.get_thw(bucket_id)
 
             cur_micro_batch: List[MicroBatch] = [
-                MicroBatch(i, real_t, real_h, real_w) for i, idx in enumerate(cur_micro_batch)
+                MicroBatch(i, real_t, real_h, real_w)
+                for i, idx in enumerate(cur_micro_batch)
             ]
             yield cur_micro_batch
 

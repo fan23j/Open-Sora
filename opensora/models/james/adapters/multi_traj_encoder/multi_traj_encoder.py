@@ -38,7 +38,7 @@ class MultiTrajEncoder(nn.Module):
         self.d_model = d_model
         self.device = device
         self.dtype = dtype
-
+        
         # Embedding layer to project 4D bounding box to d_model dimensions
         self.embed = nn.Linear(4, d_model, dtype=dtype)
 
@@ -57,13 +57,11 @@ class MultiTrajEncoder(nn.Module):
         """
         TODO: what is the expected shape of x?
 
-        x: [10, (x, 4)] -> (1, 10, x, 4)
+        x: [64, 10, (2, 4)] -> (64, 10, 2, 4)
         """
 
-        # breakpoint()
-
         # HACK: this god awful line converts a list[tensor[4, 2] -> tensor[1, 10, 4, 2]
-        x = torch.tensor(np.array([_x.float().cpu() for _x in x])).to(self.device, self.dtype).unsqueeze(0)
+        x = torch.stack([torch.stack(_x) for _x in x])
 
         # x shape: [batch_size, num_instances, num_frames, 4]
         batch_size, num_instances, num_frames, _ = x.shape
