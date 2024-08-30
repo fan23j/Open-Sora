@@ -15,16 +15,6 @@ from .datasets import NBAClipsDataset
 HARD_CODED_NUM_BATCHES = 1
 
 
-def apply(data, method=None, frame_interval=None, seed=None, num_bucket=None):
-    return method(
-        data["num_frames"],
-        data["height"],
-        data["width"],
-        frame_interval,
-        seed + data["id"] * num_bucket,
-    )
-
-
 class VariableNBAClipsBatchSampler(DistributedSampler):
     def __init__(
         self,
@@ -59,11 +49,11 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
         Place samples into buckets containing similar resolution / # frames.
         TODO: we place all samples into the same bucket for now.
         """
-        
+
         assert (
             type(self.dataset) is NBAClipsDataset
         ), f"Error: dataset.ann is {type(self.dataset)}"
-        
+
         # HACK: hard-coding buckets for now
         bucket_sample_dict = {
             (

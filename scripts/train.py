@@ -100,7 +100,7 @@ def process_batch(
     """
 
     x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
-    y = batch.pop("text")
+    # y = batch.pop("text")
 
     # calculate visual and text encoding
     with torch.no_grad():

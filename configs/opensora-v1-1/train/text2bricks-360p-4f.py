@@ -8,7 +8,7 @@ dataset = dict(
     transform_name="resize_crop",
 )
 bucket_config = {
-    "360p": {4: (1.0, 2)},
+    "360p": {4: (1.0, 4)},
 }
 mask_ratios = {
     "mask_no": 0.75,
@@ -22,9 +22,11 @@ mask_ratios = {
     "mask_image_head_tail": 0.05,
 }
 
-# Define acceleration
-num_workers = 8
-num_bucket_build_workers = 8
+# define acceleration
+# num_workers = 8
+# num_bucket_build_workers = 8
+num_workers = 0
+num_bucket_build_workers = 0
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
@@ -77,11 +79,11 @@ eval_prompts = [
     "A basketball player missing a three-point shot",
 ]
 eval_image_size = (360, 640)
-eval_num_frames = 4
-eval_fps = 8
+eval_num_frames = 2
+eval_fps = 4
 eval_batch_size = 1
 eval_steps = ckpt_every
 
 wandb_project_name = "Structured-Video-Generation"
 wandb_project_entity = "A New Entity"
-exp_id = "4f-full-ds"
+exp_id = "2f-full-ds"

@@ -141,7 +141,6 @@ class Bucket:
         
         # an example bucket_id: ('360p', (64, 2))
         return self.bucket_bs[bucket_id[0]][bucket_id[1]]
-    
         # HACK: return the batch size of a bucket
         # resolution = list(self.bucket_bs.keys())[0]
         # return list(self.bucket_bs[resolution].keys())[0]

@@ -24,9 +24,7 @@ from .utils import (
 )
 
 IMG_FPS = 120
-DATASET_DIR = (
-    "/playpen-storage/levlevi/nba-plus-statvu-dataset/filtered-clip-annotations-40-bbx-ratios"
-)
+DATASET_DIR = "/playpen-storage/levlevi/nba-plus-statvu-dataset/filtered-clip-annotations-40-bbx-ratios"
 TYPE_VIDEO = "video"
 TYPE_IMAGE = "image"
 
@@ -154,26 +152,29 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         selected_bbxs = [
             bbx for idx, bbx in enumerate(self.bbx_ratios) if idx in frame_indices_set
         ]
+
         assert type(sample_index) == int, f"{sample_index}"
+        # convert conditions to tensor obj
         conditions = {
-            "bbox_ratios": selected_bbxs,
+            "bbox_ratios": torch.tensor(selected_bbxs),
         }
 
         # transform
         transform = get_transforms_video(self.transform, (height, width))
         video = transform(video)  # T C H W
+        # breakpoint()
 
         # TCHW -> CTHW
         video: torch.Tensor = video.permute(1, 0, 2, 3)
         return {
             "video": video,
-            "text": text,
-            "num_frames": num_frames,
-            "height": height,
-            "width": width,
-            "ar": ar,
-            "fps": video_fps,
+            "num_frames": torch.tensor(num_frames),
+            "height": torch.tensor(height),
+            "width": torch.tensor(width),
+            "ar": torch.tensor(ar),
+            "fps": torch.tensor(video_fps),
             "conditions": conditions,
+            # "text": text,
         }
 
     def __len__(self) -> int:
