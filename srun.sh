@@ -1,0 +1,1 @@
+sbatch -k train.sh 

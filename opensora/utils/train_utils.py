@@ -124,9 +124,9 @@ class MaskGenerator:
                 break
 
         num_frames = x.shape[2]
-        
+
         # Hardcoded condition_frames
-        condition_frames_max = num_frames // 4 if num_frames // 4 >= 1 else 1
+        condition_frames_max = num_frames // 4
 
         mask = torch.ones(num_frames, dtype=torch.bool, device=x.device)
         if num_frames <= 1:

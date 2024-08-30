@@ -1,16 +1,19 @@
 #!/bin/bash
+#SBATCH -D /mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora
 #SBATCH --partition=a6000
 #SBATCH --nodelist=mirage.ib
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=64
 #SBATCH --gres=gpu:8
-#SBATCH --time=1000:00:00
+#SBATCH --time=50:00:00
+
+export PYTHONUNBUFFERED=TRUE
+export PYTHONPATH=/mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora:$PYTHONPATH
 
 cd /mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora
-# source op-2
-conda activate op-2
+/playpen-storage/levlevi/anaconda3/condabin/conda  activate op-2
 
-OMP_NUM_THREADS=52 /playpen-storage/levlevi/anaconda3/envs/op-2/bin/torchrun --master_port=25679 --nproc_per_node 8  scripts/train.py \
+OMP_NUM_THREADS=52 /playpen-storage/levlevi/anaconda3/envs/op-2/bin/torchrun --master_port=25677 --nproc_per_node 8  scripts/train.py \
     configs/opensora-v1-1/train/text2bricks-360p-4f.py \
     --data-path /mnt/mir/fan23j/Open-Sora/data/bball/output_filtered.csv \
     --ckpt-path /mnt/mir/fan23j/Open-Sora/pretrained/OpenSora-STDiT-v2-stage3/model.safetensors

@@ -58,7 +58,7 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
         bucket_sample_dict = {
             (
                 "360p",
-                2,
+                4,
                 "1.00",
             ): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths
         }
