@@ -273,26 +273,24 @@ def collate_tensor_fn(
             "Batches of sparse tensors are not currently supported by the default collate_fn; "
             "please provide a custom collate_fn to handle them appropriately."
         )
+    
+    # TODO: occasionally we run into mishaped batches, pad batches around max shape
+    max_shape = [max(s) for s in zip(*[x.size() for x in batch])]
+    padded_batch = []
+    for tensor in batch:
+        padding = calculate_padding(tensor, max_shape)
+        padded_tensor = F.pad(tensor, padding)
+        padded_batch.append(padded_tensor)
+        
     if torch.utils.data.get_worker_info() is not None:
         # If we're in a background process, concatenate directly into a
         # shared memory tensor to avoid an extra copy
-        numel = sum(x.numel() for x in batch)
+        numel = sum(x.numel() for x in padded_batch)
         storage = elem._typed_storage()._new_shared(numel, device=elem.device)
-        try:
-            out = elem.new(storage).resize_(len(batch), *list(elem.size()))
-        except:
-            # TODO: occasionally we run into mishaped batches, pad batches around max shape
-            print(f"Error: could not process batch: {batch}")
-            max_shape = [max(s) for s in zip(*[x.size() for x in batch])]
-            padded_batch = []
-            for tensor in batch:
-                padding = calculate_padding(tensor, max_shape)
-                padded_tensor = F.pad(tensor, padding)
-                padded_batch.append(padded_tensor)
-            return torch.stack(padded_batch, 0, out=out)
+        out = elem.new(storage).resize_(len(padded_batch), *list(elem.size()))
         
     # return stacked batch as usual
-    return torch.stack(batch, 0, out=out)
+    return torch.stack(padded_batch, 0, out=out)
 
 
 def collate_numpy_array_fn(
