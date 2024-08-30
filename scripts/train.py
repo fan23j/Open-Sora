@@ -1,5 +1,7 @@
 import warnings
 
+from nba.src.entities.clip_dataset import FilteredClipDataset
+
 # surpress warnings
 warnings.filterwarnings("ignore")
 
@@ -8,18 +10,22 @@ import wandb
 import torch
 import logging
 import torch.distributed as dist
+import numpy as np
 
 from copy import deepcopy
 from datetime import timedelta
 from pprint import pprint
 from tqdm import tqdm
 from typing import List, Dict, Optional, Tuple, Union, Any
+from torch.utils.tensorboard import SummaryWriter
 
 from colossalai.booster import Booster
 from colossalai.booster.plugin import LowLevelZeroPlugin
 from colossalai.cluster import DistCoordinator
 from colossalai.nn.optimizer import HybridAdam
 from colossalai.utils import get_current_device, set_seed
+
+from nba.src.entities.clip_annotations import ClipAnnotationWrapper
 
 # TODO: use STDiT3 as DiT backbone?
 # https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3
@@ -211,7 +217,7 @@ def train(
     optimizer: HybridAdam,
     lr_scheduler: OneCycleScheduler,
     ema: STDiT2,
-    writer,
+    writer: SummaryWriter,
     exp_dir: str,
     ema_shape_dict: Dict[str, Any],
     sampler_to_io: VariableNBAClipsBatchSampler,
@@ -221,93 +227,108 @@ def train(
     Main training loop.
     """
 
+    filtered_clip_dataset: FilteredClipDataset = sampler_to_io.dataset.filtered_dataset
     running_loss = 0.0
     log_step = 0
     acc_step = 0
 
     for epoch in range(start_epoch, cfg.epochs):
         dataloader_iter = iter(dataloader)
+
+        # TODO: we can't see logging atm
         logger.info(f"Beginning epoch {epoch}...")
 
-        with tqdm(
+        pbar = tqdm(
             iterable=enumerate(dataloader_iter, start=0),
             desc=f"Training JAMES ⛹️ | Epoch {epoch}",
             disable=not coordinator.is_master(),
             total=num_steps_per_epoch,
-        ) as pbar:
+        )
 
-            iteration_times = []
-            for step, batch in pbar:
-                start_time = time.time()
+        iteration_times = []
+        for step, batch in pbar:
+            start_time = time.time()
+            
+            # this discusting logic loads the annotation wrapper for the current sample
+            sample_annotation_wrapper = ClipAnnotationWrapper(
+                filtered_clip_dataset.filtered_clip_annotations_file_paths[
+                    batch["clip_annotation_idx"].cpu().numpy()[0]
+                ]
+            )
+            
+            # HACK:
+            # remove this addtional key to play nice with other models
+            del batch["clip_annotation_idx"]
 
-                # mem: 8.6s GB
-                # process the batch
-                loss_dict = process_batch(
-                    batch, vae, model, scheduler, mask_generator, device, dtype
-                )
-                loss = loss_dict["loss"].mean()
+            # mem: 8.6s GB
+            # process the batch
+            loss_dict = process_batch(
+                batch, vae, model, scheduler, mask_generator, device, dtype
+            )
+            loss = loss_dict["loss"].mean()
 
-                # compute and apply gradients
-                compute_and_apply_gradients(
-                    loss, booster, optimizer, lr_scheduler, ema, model
-                )
+            # compute and apply gradients
+            compute_and_apply_gradients(
+                loss, booster, optimizer, lr_scheduler, ema, model
+            )
 
-                # logging
-                global_step = epoch * num_steps_per_epoch + step
-                iteration_times.append(time.time() - start_time)
-                running_loss += loss.item()
-                log_step += 1
-                acc_step += 1
+            # logging
+            global_step = epoch * num_steps_per_epoch + step
+            iteration_times.append(time.time() - start_time)
+            running_loss += loss.item()
+            log_step += 1
+            acc_step += 1
+            
+            running_loss, log_step = log_progress(
+                logger,
+                sample_annotation_wrapper,
+                coordinator,
+                global_step,
+                cfg,
+                writer,
+                loss,
+                running_loss,
+                log_step,
+                model,
+                iteration_times,
+                optimizer,
+                epoch,
+                acc_step,
+            )
 
-                running_loss, log_step = log_progress(
-                    logger,
-                    coordinator,
-                    global_step,
-                    cfg,
-                    writer,
-                    loss,
-                    running_loss,
-                    log_step,
+            # save checkpoint if needed
+            save_checkpoint_if_needed(
+                cfg,
+                global_step,
+                epoch,
+                step,
+                booster,
+                model,
+                ema,
+                optimizer,
+                lr_scheduler,
+                coordinator,
+                exp_dir,
+                ema_shape_dict,
+                sampler_to_io,
+            )
+
+            # evaluate and save samples if needed
+            if global_step % cfg.eval_steps == 0:
+                write_sample(
                     model,
-                    iteration_times,
-                    optimizer,
-                    epoch,
-                    acc_step,
-                )
-
-                # save checkpoint if needed
-                save_checkpoint_if_needed(
+                    vae,
+                    scheduler_inference,
                     cfg,
-                    global_step,
                     epoch,
-                    step,
-                    booster,
-                    model,
-                    ema,
-                    optimizer,
-                    lr_scheduler,
-                    coordinator,
                     exp_dir,
-                    ema_shape_dict,
-                    sampler_to_io,
+                    global_step,
+                    dtype,
+                    device,
                 )
+                log_sample(coordinator.is_master(), cfg, epoch, exp_dir, global_step)
 
-                # evaluate and save samples if needed
-                if global_step % cfg.eval_steps == 0:
-                    write_sample(
-                        model,
-                        vae,
-                        scheduler_inference,
-                        cfg,
-                        epoch,
-                        exp_dir,
-                        global_step,
-                        dtype,
-                        device,
-                    )
-                    log_sample(
-                        coordinator.is_master(), cfg, epoch, exp_dir, global_step
-                    )
+            pbar.update()
 
         # finalize the epoch
         finalize_epoch(cfg, dataloader, epoch)

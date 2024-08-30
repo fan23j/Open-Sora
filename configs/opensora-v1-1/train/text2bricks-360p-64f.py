@@ -23,8 +23,8 @@ mask_ratios = {
 }
 
 # Define acceleration
-num_workers = 0
-num_bucket_build_workers = 0
+num_workers = 8
+num_bucket_build_workers = 8
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"

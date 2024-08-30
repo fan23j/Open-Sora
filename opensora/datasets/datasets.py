@@ -167,6 +167,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         # TCHW -> CTHW
         video: torch.Tensor = video.permute(1, 0, 2, 3)
         return {
+            "clip_annotation_idx": torch.tensor(sample_index),
             "video": video,
             "num_frames": torch.tensor(num_frames),
             "height": torch.tensor(height),

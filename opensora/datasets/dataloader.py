@@ -7,6 +7,9 @@ from torch.distributed import ProcessGroup
 from torch.distributed.distributed_c10d import _get_default_group
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
+
+from opensora.datasets import collate
+from opensora.datasets.collate import default_collate
 from .sampler import VariableNBAClipsBatchSampler
 
 
@@ -59,9 +62,13 @@ def prepare_variable_dataloader(
     # TODO: batch size is mututally exclusive with batch sampler
     return torch.utils.data.DataLoader(
         dataset,
+        collate_fn=default_collate,
         batch_sampler=batch_sampler,
         worker_init_fn=seed_worker,
         pin_memory=pin_memory,
         num_workers=num_workers,
         **_kwargs,
     )
+    
+def safe_collate_fn(dataloader: torch.utils.data.DataLoader):
+    pass

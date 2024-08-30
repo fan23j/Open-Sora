@@ -39,16 +39,17 @@ class MultiTrajEncoder(nn.Module):
         self.device = device
         self.dtype = dtype
         
-        # Embedding layer to project 4D bounding box to d_model dimensions
+        # embedding layer to project 4D bounding box to d_model dimensions
         self.embed = nn.Linear(4, d_model, dtype=dtype)
 
-        # Fourier feature positional encoding
+        # fourier feature positional encoding
         self.pos_encoding = FourierFeatures(num_frames, d_model, dtype)
 
-        # Transformer encoder
+        # transformer encoder
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model, nhead=nhead, dtype=dtype
         )
+        
         self.transformer_encoder = nn.TransformerEncoder(
             encoder_layer, num_layers=num_layers
         )

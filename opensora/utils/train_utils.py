@@ -3,48 +3,65 @@ import random
 import torch
 import wandb
 
+from typing import List, Tuple, Optional
+from logging import Logger
+from torch.utils.tensorboard import SummaryWriter
 from collections import OrderedDict
+from colossalai.cluster import DistCoordinator
+from colossalai.nn.optimizer import HybridAdam
+from nba.src.entities.clip_annotations import ClipAnnotationWrapper
+from opensora.utils.config_entity import TrainingConfig
 from opensora.utils.model_helpers import calculate_weight_norm, push_to_device
+from opensora.models.stdit.stdit2 import STDiT2
 
 
 def log_progress(
-    logger,
-    coordinator,
-    global_step,
-    cfg,
-    writer,
-    loss,
-    running_loss,
-    log_step,
-    model,
-    iteration_times,
-    optimizer,
-    epoch,
-    acc_step,
-):
-    if coordinator.is_master() and global_step % cfg.log_every == 0:
-        avg_loss = running_loss / log_step
-        running_loss = 0
-        log_step = 0
-        writer.add_scalar("loss", loss.item(), global_step)
-        weight_norm = calculate_weight_norm(model)
+    logger: Logger,
+    sample_annotation_wrapper: ClipAnnotationWrapper,
+    coordinator: DistCoordinator,
+    global_step: int,
+    cfg: TrainingConfig,
+    writer: SummaryWriter,
+    loss: torch.Tensor,
+    running_loss: float,
+    log_step: int,
+    model: STDiT2,
+    iteration_times: List[float],
+    optimizer: HybridAdam,
+    epoch: int,
+    acc_step: int,
+) -> Tuple[Optional[float], Optional[int]]:
+    """
+    Log the current state of the training run to W&B.
+    """
+    
+    avg_loss = running_loss / log_step
+    running_loss = 0
+    log_step = 0
+    writer.add_scalar("loss", loss.item(), global_step)
+    weight_norm = calculate_weight_norm(model)
+    
+    # if this not the main process or not at log interval, return
+    if not coordinator.is_master() or not  global_step % cfg.log_every == 0:
+        return avg_loss, log_step
+    
+    if not cfg.wandb:
+        return avg_loss, log_step
 
-        if cfg.wandb:
-            wandb.log(
-                {
-                    "avg_iteration_time": sum(iteration_times) / len(iteration_times),
-                    "iter": global_step,
-                    "epoch": epoch,
-                    "loss": loss.item(),
-                    "avg_loss": avg_loss,
-                    "acc_step": acc_step,
-                    "lr": optimizer.param_groups[0]["lr"],
-                    "weight_norm": weight_norm,
-                },
-                step=global_step,
-            )
-            iteration_times.clear()
-
+    wandb.log(
+        {
+            "avg_iteration_time": sum(iteration_times) / len(iteration_times),
+            "iter": global_step,
+            "epoch": epoch,
+            "loss": loss.item(),
+            "avg_loss": avg_loss,
+            "acc_step": acc_step,
+            "lr": optimizer.param_groups[0]["lr"],
+            "weight_norm": weight_norm,
+        },
+        step=global_step,
+    )
+    iteration_times.clear()
     return running_loss, log_step
 
 
