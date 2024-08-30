@@ -36,10 +36,7 @@ def log_progress(
     """
     
     avg_loss = running_loss / log_step
-    running_loss = 0
     log_step = 0
-    writer.add_scalar("loss", loss.item(), global_step)
-    weight_norm = calculate_weight_norm(model)
     
     # if this not the main process or not at log interval, return
     if not coordinator.is_master() or not  global_step % cfg.log_every == 0:
@@ -48,6 +45,10 @@ def log_progress(
     if not cfg.wandb:
         return avg_loss, log_step
 
+    running_loss = 0
+    writer.add_scalar("loss", loss.item(), global_step)
+    weight_norm = calculate_weight_norm(model)
+    
     wandb.log(
         {
             "avg_iteration_time": sum(iteration_times) / len(iteration_times),
