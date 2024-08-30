@@ -20,7 +20,7 @@ class NBAClipsDataloader(DataLoader):
 
 def prepare_variable_dataloader(
     dataset,
-    batch_size,
+    batch_size: int,
     bucket_config,
     shuffle=False,
     seed=1024,
@@ -34,6 +34,7 @@ def prepare_variable_dataloader(
     """
     TODO: we arn't usign the `batch_size` arg at the moment.
     """
+
     _kwargs = kwargs.copy()
     process_group = process_group or _get_default_group()
     batch_sampler = VariableNBAClipsBatchSampler(
@@ -48,13 +49,14 @@ def prepare_variable_dataloader(
         num_bucket_build_workers=num_bucket_build_workers,
     )
 
-    # Deterministic dataloader
+    # deterministic dataloader
     def seed_worker(worker_id):
         worker_seed = seed
         np.random.seed(worker_seed)
         torch.manual_seed(worker_seed)
         random.seed(worker_seed)
 
+    # TODO: batch size is mututally exclusive with batch sampler
     return torch.utils.data.DataLoader(
         dataset,
         batch_sampler=batch_sampler,

@@ -7,7 +7,21 @@ from collections import OrderedDict
 from opensora.utils.model_helpers import calculate_weight_norm, push_to_device
 
 
-def log_progress(logger, coordinator, global_step, cfg, writer, loss, running_loss, log_step, model, iteration_times, optimizer, epoch, acc_step):
+def log_progress(
+    logger,
+    coordinator,
+    global_step,
+    cfg,
+    writer,
+    loss,
+    running_loss,
+    log_step,
+    model,
+    iteration_times,
+    optimizer,
+    epoch,
+    acc_step,
+):
     if coordinator.is_master() and global_step % cfg.log_every == 0:
         avg_loss = running_loss / log_step
         running_loss = 0
@@ -38,14 +52,14 @@ def log_progress(logger, coordinator, global_step, cfg, writer, loss, running_lo
 def update_ema(
     ema_model: torch.nn.Module,
     model: torch.nn.Module,
-    optimizer: torch.optim.Optimizer=None,
+    optimizer: torch.optim.Optimizer = None,
     decay: float = 0.9999,
     sharded: bool = True,
 ) -> None:
     """
     Step the EMA model towards the current model.
     """
-    
+
     ema_params = OrderedDict(ema_model.named_parameters())
     model_params = OrderedDict(model.named_parameters())
 
@@ -62,7 +76,7 @@ def update_ema(
             continue
             if param.data.dtype != torch.float32:
                 param_id = id(param)
-                master_param = optimizer .working_to_master_param[param_id]
+                master_param = optimizer.working_to_master_param[param_id]
                 # master_param = optimizer._param_group.working_to_master_param[param_id]
                 param_data = master_param.data
             else:
@@ -110,8 +124,9 @@ class MaskGenerator:
                 break
 
         num_frames = x.shape[2]
+        
         # Hardcoded condition_frames
-        condition_frames_max = num_frames // 4
+        condition_frames_max = num_frames // 4 if num_frames // 4 >= 1 else 1
 
         mask = torch.ones(num_frames, dtype=torch.bool, device=x.device)
         if num_frames <= 1:

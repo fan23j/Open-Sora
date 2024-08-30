@@ -8,7 +8,7 @@ dataset = dict(
     transform_name="resize_crop",
 )
 bucket_config = {
-    "360p": {4: (1.0, 4)},
+    "360p": {2: (1.0, 16)},
 }
 mask_ratios = {
     "mask_no": 0.75,
@@ -23,10 +23,8 @@ mask_ratios = {
 }
 
 # define acceleration
-# num_workers = 8
-# num_bucket_build_workers = 8
-num_workers = 0
-num_bucket_build_workers = 0
+num_workers = 8
+num_bucket_build_workers = 8
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
@@ -72,7 +70,7 @@ lr_schedule = "cosine_const"
 warmup_steps = 1
 lr = 1e-5
 
-batch_size = 1
+batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
