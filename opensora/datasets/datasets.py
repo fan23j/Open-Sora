@@ -142,11 +142,10 @@ class VariableVideoTextDataset(VideoTextDataset):
             vframes, _, infos = torchvision.io.read_video(filename=path, pts_unit="sec", output_format="TCHW")
             if "video_fps" in infos:
                 video_fps = infos["video_fps"]
-
             # sampling video frames
             video, frame_indices = temporal_random_crop(vframes, num_frames, self.frame_interval)
             # conditions
-            conditions = extract_conditions(sample, frame_indices)
+            conditions = extract_conditions(sample)
 
             # transform
             transform = get_transforms_video(self.transform_name, (height, width))

@@ -206,7 +206,7 @@ def resize_crop_to_fill(pil_image, image_size):
 
 
 
-def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
+def bounding_box_string_to_tensor(bbox_string, num_instances=10, num_frames=300):
     """
     Convert a string of bounding box coordinates to a tensor, extracting only the specified frames.
     
@@ -224,27 +224,27 @@ def bounding_box_string_to_tensor(bbox_string, frame_indices, num_instances=10):
     # bbox_values = [float(x) for x in cleaned_string.split(",")]
     bbox_values = eval(bbox_string, {"array": np.array})
     
-    # Calculate the total number of frames in the original data
-    total_frames = len(bbox_values)
-    
-    # Extract only the specified frames
-    extracted_values = []
-    for frame in frame_indices:
-        extracted_values.extend(bbox_values[frame])
-    
     # Reshape into [num_instances, len(frame_indices), 4]
-    num_frames = len(frame_indices)
-    extracted_values_array = np.array(extracted_values)
+    extracted_values_array = np.array(bbox_values)
+
+    if extracted_values_array.shape[0] < num_frames:
+    # Calculate how many more instances are needed
+        num_needed = num_frames - extracted_values_array.shape[0]
+    # Pad the array with zeros at the end to match the required number of frames
+        padding = np.zeros((num_needed, num_instances, 4))  # Ensure the shape matches your data structure
+        extracted_values_array = np.vstack((extracted_values_array, padding))
+    else:
+    # Truncate the array to the required number of frames
+        extracted_values_array = extracted_values_array[:num_frames]
     return torch.from_numpy(extracted_values_array).reshape(num_instances, num_frames, 4)
 
-def extract_conditions(sample, frame_indices):
+def extract_conditions(sample):
     conditions = {}
     conditions["bbox_ratios"] = bounding_box_string_to_tensor(
         sample["bbox_ratios"], 
-        frame_indices
     )
 
-    conditions["text"] = sample["text"]
+    # conditions["text"] = sample["text"]
     
     return conditions
 
