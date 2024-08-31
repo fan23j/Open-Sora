@@ -3,12 +3,12 @@ dataset = dict(
     type="VariableVideoTextDataset",
     data_path=None,
     num_frames=None,
-    frame_interval=4,
+    frame_interval=8,
     image_size=(None, None),
     transform_name="resize_crop",
 )
 bucket_config = {
-    "360p": {32: (1.0, 8)},
+    "360p": {8: (1.0, 16)},
 }
 mask_ratios = {
     "mask_no": 0.75,
@@ -45,13 +45,13 @@ vae = dict(
     micro_batch_size=4,
     local_files_only=True,
 )
-text_encoder = dict(
-    type="t5",
-    from_pretrained="DeepFloyd/t5-v1_1-xxl",
-    model_max_length=200,
-    shardformer=True,
-    local_files_only=True,
-)
+# text_encoder = dict(
+#     type="t5",
+#     from_pretrained="DeepFloyd/t5-v1_1-xxl",
+#     model_max_length=200,
+#     shardformer=True,
+#     local_files_only=True,
+# )
 scheduler = dict(
     type="iddpm",
     timestep_respacing="",
@@ -85,23 +85,16 @@ batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-        "A scuba diver on a coral reef with schools of fish swimming, and a sea turtle and an octopus.",
-        "People eating ice cream and drinkin espresso outside of a cafe on a narrow street in Rome. There are stores along the street selling a variety of wares. One shop sells fruits. Another shop sells vegetables. A third shop sells christmas ornaments. Many people walk along the street.",
-        "An astronaut walking on the moon, with the effects of gravity making the walk appear very bouncy.",
-        "A person walks down a garden path. The path is surrounded by gorgeous and colorful flowers, lush bushes, and grand trees. Butterflies and bees zip around the scene in the background. The person is walking directly towards the camera.",
-        "A ninja wearing a red outfit jumps from one roof of a building to a second building's roof. The full moon is in sight directly behind the ninja.",
-        "A newly married couple do their first dance at a wedding. Both partners are wearing white dresses, and are slow dancing in the center of a beautifully decorated wedding hall.",
-        "A fat rabbit wearing a purple robe walking through a fantasy landscape",
-        "A young man walks alone by the seaside",            
+        "",  
 ]
 
 eval_image_size = (360, 640)
-eval_num_frames = 32
+eval_num_frames = 8
 eval_fps = 8
 eval_batch_size = 1
 eval_steps = ckpt_every
 
-wandb_project_name = "text2bricks-360p-32f"
-wandb_project_entity = None
+wandb_project_name = "STDiT-Motion"
+wandb_project_entity = "Video-Generation-For-Structured-Behavior-Modeling"
 
-exp_id = "text2bricks-360p-32f"
+exp_id = "multi_traj_full_traj_new_adapter"

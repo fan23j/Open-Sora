@@ -110,14 +110,14 @@ class STDiT2Block(nn.Module):
                 self.scale_shift_table_temporal[None] + t0_tmp.reshape(B, 3, -1)
             ).chunk(3, dim=1)
 
-        # inject conditions
-        x = self.bbox_cross_attn(x, conditions['bbox_features'])
-
         # modulate
         x_m = t2i_modulate(self.norm1(x), shift_msa, scale_msa)
         if x_mask is not None:
             x_m_zero = t2i_modulate(self.norm1(x), shift_msa_zero, scale_msa_zero)
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
+        
+        # inject conditions
+        x = self.bbox_cross_attn(x, conditions['bbox_features'])
 
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
@@ -262,7 +262,7 @@ class STDiT2(PreTrainedModel):
         #     self.text_embeddings[k] = v.cuda().detach().requires_grad_(False)
 
         # condition module
-        self.james = JAMES(ca_hidden_size=config.hidden_size, ca_num_heads=config.num_heads)
+        self.james = JAMES()
 
         drop_path = [x.item() for x in torch.linspace(0, config.drop_path, config.depth)]
         self.rope = RotaryEmbedding(dim=self.hidden_size // self.num_heads)  # new

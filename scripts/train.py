@@ -255,6 +255,8 @@ def write_sample(model, vae, scheduler, cfg, epoch, exp_dir, global_step, dtype,
             #transfer conditions to gpu
             for key in conditions:
                 conditions[key] = conditions[key].to(device, dtype)
+            # reshape bbox ratios
+            conditions["bbox_ratios"] = conditions["bbox_ratios"].permute(0, 2, 1, 3).contiguous()
 
             for i in range(0, len(prompts), eval_batch_size):
                 batch_prompts = prompts[i:i + eval_batch_size]

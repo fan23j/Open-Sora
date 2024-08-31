@@ -1,4 +1,4 @@
-num_frames = 32
+num_frames = 8
 frame_interval = 1
 fps = 8
 image_size = (360, 640)
@@ -19,12 +19,12 @@ vae = dict(
     cache_dir=None,  # "/mnt/hdd/cached_models",
     micro_batch_size=4,
 )
-text_encoder = dict(
-    type="t5",
-    from_pretrained="DeepFloyd/t5-v1_1-xxl",
-    cache_dir=None,  # "/mnt/hdd/cached_models",
-    model_max_length=200,
-)
+# text_encoder = dict(
+#     type="t5",
+#     from_pretrained="DeepFloyd/t5-v1_1-xxl",
+#     cache_dir=None,  # "/mnt/hdd/cached_models",
+#     model_max_length=200,
+# )
 scheduler = dict(
     type="iddpm",
     num_sampling_steps=100,

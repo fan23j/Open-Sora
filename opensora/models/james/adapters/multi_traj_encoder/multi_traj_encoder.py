@@ -1,61 +1,64 @@
 import torch
 import torch.nn as nn
 
-class FourierFeatures(nn.Module):
-    def __init__(self, num_frames, d_model):
-        super().__init__()
-        self.num_frames = num_frames
-        self.d_model = d_model
-        self.freq_bands = nn.Parameter(torch.linspace(1, num_frames / 2, d_model // 4).view(1, -1), requires_grad=False)
-        self.freq_bands.data = self.freq_bands.data.to(device="cuda")
-        
-    def forward(self, t):
-        # t: [num_frames]
-        t = t.unsqueeze(1)  # [num_frames, 1]
-        freq_sin = torch.sin(2 * torch.pi * self.freq_bands * t / self.num_frames)
-        freq_cos = torch.cos(2 * torch.pi * self.freq_bands * t / self.num_frames)
-        return torch.cat([freq_sin, freq_cos, freq_sin, freq_cos], dim=-1)
+class FourierEmbedder():
+    def __init__(self, num_freqs=64, temperature=100):
 
-#TODO: d_model should come from hidden_dim in main diffuser
-#TODO: ablate hyperparameters
+        self.num_freqs = num_freqs
+        self.temperature = temperature
+        self.freq_bands = temperature ** ( torch.arange(num_freqs) / num_freqs )  
+
+    @ torch.no_grad()
+    def __call__(self, x, cat_dim=-1):
+        "x: arbitrary shape of tensor. dim: cat dim"
+        out = []
+        for freq in self.freq_bands:
+            out.append( torch.sin( freq*x ) )
+            out.append( torch.cos( freq*x ) )
+        return torch.cat(out, cat_dim)
+
 class MultiTrajEncoder(nn.Module):
-    def __init__(self, num_frames=300, num_instances=10, d_model=1152, nhead=4, num_layers=2, device='cuda'):
+    def __init__(self, num_frames=300, num_instances=10, d_model=1152, num_layers=2):
         super().__init__()
         self.d_model = d_model
-        self.device = device
+        self.fourier_embedder = FourierEmbedder(num_freqs=8)
+        self.instance_embeddings = nn.Parameter(torch.zeros(num_instances, d_model))
+        self.frame_embeddings = nn.Parameter(torch.zeros(num_frames, d_model))
         
-        # Embedding layer to project 4D bounding box to d_model dimensions
-        self.embed = nn.Linear(4, d_model)
+        self.input_proj = nn.Linear(64, d_model)
         
-        # Fourier feature positional encoding
-        self.pos_encoding = FourierFeatures(num_frames, d_model)
+        self.layers = nn.ModuleList([
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=8)
+            for _ in range(num_layers)
+        ])
         
-        # Transformer encoder
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-    
-    def forward(self, x):
-        # Ensure input is on the correct device and has the correct dtype
-        x = x.to(device=self.device)
+        self.output_proj = nn.Linear(d_model, d_model)
 
+    def forward(self, x):
         # x shape: [batch_size, num_instances, num_frames, 4]
         batch_size, num_instances, num_frames, _ = x.shape
 
-        # Embed the bounding boxes
-        x = self.embed(x)  # Shape: [batch_size, num_instances, num_frames, d_model]
+        # Apply Fourier embedding
+        x = x.view(-1, 4)
+        x = self.fourier_embedder(x)
+        x = self.input_proj(x)
+        x = x.view(batch_size, num_instances, num_frames, -1)
         
-        # Generate and add positional encoding
-        t = torch.arange(num_frames, device=self.device)
-        pos_enc = self.pos_encoding(t)
-        x = x + pos_enc.unsqueeze(0).unsqueeze(0)
+        # Add instance and frame embeddings
+        x = x + self.instance_embeddings.unsqueeze(1).unsqueeze(0)
+        x = x + self.frame_embeddings.unsqueeze(0).unsqueeze(0)
         
-        # Reshape for transformer input
-        x = x.view(batch_size * num_instances, num_frames, self.d_model)
+        # Reshape for transformer layers
+        x = x.view(-1, num_instances * num_frames, self.d_model)
         
-        # Pass through transformer
-        x = self.transformer_encoder(x)
+        # Apply transformer layers
+        for layer in self.layers:
+            x = layer(x)
         
-        # Reshape back
-        x = x.view(batch_size, num_instances, num_frames, self.d_model)
+        # Global average pooling
+        x = x.mean(dim=1)
+        
+        # Final projection
+        x = self.output_proj(x)
         
         return x

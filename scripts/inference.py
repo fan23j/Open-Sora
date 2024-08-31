@@ -11,6 +11,7 @@ from opensora.datasets import IMG_FPS, save_sample
 from opensora.registry import MODELS, SCHEDULERS, build_module
 from opensora.utils.config_utils import parse_configs
 from opensora.utils.misc import to_torch_dtype
+from opensora.datasets.utils import bounding_box_string_to_tensor
 
 def main():
     # ======================================================
@@ -93,10 +94,12 @@ def main():
         model_args["fps"] = fps
         model_args["conditions"] = torch.load('/mnt/mir/fan23j/data/nba-plus-statvu-dataset/__scripts__/conditions.pth')
 
-    #transfer conditions to gpu
+    # transfer conditions to gpu
     for key in model_args["conditions"]:
         model_args["conditions"][key] = model_args["conditions"][key].to(device, dtype)
 
+    # reshape bbox ratios
+    model_args["conditions"]["bbox_ratios"] = model_args["conditions"]["bbox_ratios"].permute(0, 2, 1, 3).contiguous()
     # ======================================================
     # 4. inference
     # ======================================================

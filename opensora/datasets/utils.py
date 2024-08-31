@@ -205,10 +205,9 @@ def resize_crop_to_fill(pil_image, image_size):
     return Image.fromarray(arr[i : i + th, j : j + tw])
 
 
-
 def bounding_box_string_to_tensor(bbox_string, num_instances=10, num_frames=300):
     """
-    Convert a string of bounding box coordinates to a tensor, extracting only the specified frames.
+    Convert a string of bounding box coordinates to a tensor.
     
     Args:
     bbox_string (str): A string of comma-separated floating-point numbers representing
@@ -219,9 +218,6 @@ def bounding_box_string_to_tensor(bbox_string, num_instances=10, num_frames=300)
     Returns:
     torch.Tensor: A tensor of shape [num_instances, len(frame_indices), 4] containing the extracted bounding box coordinates.
     """
-    # Clean and parse the string
-    # cleaned_string = bbox_string.strip('[]() ').strip()
-    # bbox_values = [float(x) for x in cleaned_string.split(",")]
     bbox_values = eval(bbox_string, {"array": np.array})
     
     # Reshape into [num_instances, len(frame_indices), 4]
