@@ -50,7 +50,7 @@ class STDiT2Block(nn.Module):
         self.norm1 = get_layernorm(
             hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
         )
-        
+
         # TODO: freeze
         # spatial attention
         self.attn = Attention(
@@ -60,14 +60,13 @@ class STDiT2Block(nn.Module):
             enable_flash_attn=enable_flash_attn,
             qk_norm=qk_norm,
         )
-        
-        
+
         self.scale_shift_table = nn.Parameter(
             torch.randn(6, hidden_size) / hidden_size**0.5
         )
 
         # injection module
-        self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads)
+        # self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads)
 
         # cross attn
         # self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
@@ -87,8 +86,8 @@ class STDiT2Block(nn.Module):
         # temporal branch
         self.norm_temp = get_layernorm(
             hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
-        )  
-        
+        )
+
         # temporal attention layer
         self.attn_temp = Attention(
             hidden_size,
@@ -126,7 +125,7 @@ class STDiT2Block(nn.Module):
         conditions=None,
     ):
         B, N, C = x.shape
-        
+
         # 1. shift, scale, gate
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.scale_shift_table[None] + t.reshape(B, 6, -1)
@@ -134,7 +133,7 @@ class STDiT2Block(nn.Module):
         shift_tmp, scale_tmp, gate_tmp = (
             self.scale_shift_table_temporal[None] + t_tmp.reshape(B, 3, -1)
         ).chunk(3, dim=1)
-        
+
         # 1a. optionally apply masks to inputs
         if x_mask is not None:
             (
@@ -157,7 +156,7 @@ class STDiT2Block(nn.Module):
 
         # inject conditions
         # TODO: add injection conditions to module and config
-        x = self.james(x, conditions)
+        # x = self.james(x, conditions)
 
         # 2. spatial self-attention
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
@@ -207,6 +206,7 @@ class STDiT2Block(nn.Module):
         else:
             x_mlp = gate_mlp * x_mlp
         x = x + self.drop_path(x_mlp)
+
         return x
 
 
@@ -328,7 +328,7 @@ class STDiT2(PreTrainedModel):
 
         # multi_res
         assert self.hidden_size % 3 == 0, "hidden_size must be divisible by 3"
-        
+
         # embedders
         self.csize_embedder = SizeEmbedder(self.hidden_size // 3)
         self.ar_embedder = SizeEmbedder(self.hidden_size // 3)
@@ -338,7 +338,7 @@ class STDiT2(PreTrainedModel):
         # init model
         self.initialize_weights()
         self.initialize_temporal()
-        
+
         if config.freeze is not None:
             assert config.freeze in ["not_temporal", "text"]
             if config.freeze == "not_temporal":
@@ -382,7 +382,7 @@ class STDiT2(PreTrainedModel):
         Returns:
             x (torch.Tensor): output latent representation; of shape [B, C, T, H, W]
         """
-        
+
         B = x.shape[0]
         dtype = self.x_embedder.proj.weight.dtype
         x = x.to(dtype)
@@ -392,13 +392,13 @@ class STDiT2(PreTrainedModel):
         # 1. get dynamic size
         hw = torch.cat([height[:, None], width[:, None]], dim=1)
         rs = (height[0].item() * width[0].item()) ** 0.5
-        
+
         # TODO: freeze
         csize = self.csize_embedder(hw, B)
 
         # 2. get aspect ratio
         ar = ar.unsqueeze(1)
-        
+
         # TODO: freeze
         ar = self.ar_embedder(ar, B)
         data_info = torch.cat([csize, ar], dim=1)
@@ -406,7 +406,7 @@ class STDiT2(PreTrainedModel):
         # 3. get number of frames
         fl = num_frames.unsqueeze(1)
         fps = fps.unsqueeze(1)
-        
+
         # TODO: freeze
         fl = self.fl_embedder(fl, B)
         fl = fl + self.fps_embedder(fps, B)
@@ -417,14 +417,14 @@ class STDiT2(PreTrainedModel):
         S = H * W
         scale = rs / self.input_sq_size
         base_size = round(S**0.5)
-        
+
         # TODO: freeze
         pos_emb = self.pos_embed(x, H, W, scale=scale, base_size=base_size)
 
         # embedding
         # TODO: freeze
         x = self.x_embedder(x)  # [B, N, C]
-        
+
         x = rearrange(x, "B (T S) C -> B T S C", T=T, S=S)
         x = x + pos_emb
         x = rearrange(x, "B T S C -> B (T S) C")
@@ -568,7 +568,7 @@ class STDiT2(PreTrainedModel):
         # for block in self.blocks:
         #     nn.init.constant_(block.cross_attn.proj.weight, 0)
         #     nn.init.constant_(block.cross_attn.proj.bias, 0)
-        
+
         # Zero-out output layers:
         nn.init.constant_(self.final_layer.linear.weight, 0)
         nn.init.constant_(self.final_layer.linear.bias, 0)
