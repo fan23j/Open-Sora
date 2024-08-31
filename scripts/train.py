@@ -35,7 +35,11 @@ from opensora.schedulers.iddpm import IDDPM
 from opensora.utils.config_entity import TrainingConfig
 from opensora.utils.model_helpers import calculate_weight_norm, push_to_device
 from opensora.utils.lr_schedulers import ConstantWarmupLR, OneCycleScheduler
-from opensora.utils.wandb_logging import write_sample, log_sample
+from opensora.utils.wandb_logging import (
+    write_sample,
+    log_sample,
+    save_training_samples_to_wnb,
+)
 from opensora.utils.sampler_entities import MicroBatch
 from opensora.datasets.datasets import NBAClipsDataset
 from opensora.datasets.sampler import VariableNBAClipsBatchSampler
@@ -228,10 +232,8 @@ def train(
     """
 
     filtered_clip_dataset: FilteredClipDataset = sampler_to_io.dataset.filtered_dataset
-    
+    global_step = 0; log_step = 0; acc_step = 0
     running_loss = 0.0
-    log_step = 0
-    acc_step = 0
 
     for epoch in range(start_epoch, cfg.epochs):
         dataloader_iter = iter(dataloader)
@@ -248,6 +250,7 @@ def train(
 
         iteration_times = []
         for step, batch in pbar:
+            
             start_time = time.time()
 
             # this discusting logic loads the annotation wrapper for the current sample
@@ -256,9 +259,20 @@ def train(
                     batch["clip_annotation_idx"].cpu().numpy()[0]
                 ]
             )
+            
+            # use the batch var before we pop the video attribute
+            if global_step % cfg.eval_steps == 0:
+                # pass in raw video tensor
+                # how do we get frame indicies, we don't we use the bbx ratios as the model sees them
+                # upload side by size visualizations w/ conditions and training samples
+                # save_training_samples_to_wnb(
+                #     batch, coordinator.is_master(), cfg, epoch, exp_dir, global_step
+                # )
+                pass
 
             # HACK:
             # remove this addtional key to play nice with other models
+            # del batch["unnormalized_video"]
             del batch["clip_annotation_idx"]
 
             # mem: 8.6s GB
@@ -354,7 +368,7 @@ def main():
     dtype = to_torch_dtype(cfg.dtype)
 
     writer: Optional[Any] = None
-    
+
     if not coordinator.is_master():
         logger = create_logger(None)
     else:
@@ -470,6 +484,7 @@ def main():
         cfg.scheduler_inference.to_dict(), SCHEDULERS
     )
 
+    # TODO: suppress console out
     # 4.5. setup optimizer
     optimizer: HybridAdam = HybridAdam(
         filter(lambda p: p.requires_grad, model.parameters()),

@@ -11,8 +11,8 @@ dataset = dict(
 # dict: {
 #     resolution: {num_frames: (aspect_ratio (w/h), batch_size)},}
 bucket_config = {
-    # "360p": {4: (1.78, 16)},
-    "360p": {4: (1.78, 2)},
+    "360p": {1: (1.78, 64)},
+    # "360p": {4: (1.78, 2)},
 }
 
 mask_ratios = {
@@ -28,8 +28,8 @@ mask_ratios = {
 }
 
 # define acceleration
-num_workers = 0
-num_bucket_build_workers = 0
+num_workers = 8
+num_bucket_build_workers = 16
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"

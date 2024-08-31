@@ -131,6 +131,8 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         num_frames: int = index.num_frames
         height, width = index.height, index.width
         video_path = self.ann_wrapper.video_fp
+        
+        # TODO: we don't use text embeds
         text: str = self.clip_annotation.video_info.caption
         ar: float = height / width
         video_fps: int = self.clip_annotation.video_info.video_fps
@@ -146,7 +148,11 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         video, frame_indices = temporal_random_crop(
             vframes, num_frames, self.frame_interval
         )
-
+        
+        # HACK: for visualizations
+        # unnormalized_video = video.clone()
+        # unnormalized_video.cpu()
+        
         # select the corresponding bbx rations
         frame_indices_set = set(frame_indices)
         selected_bbxs = [
@@ -154,6 +160,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         ]
 
         assert type(sample_index) == int, f"{sample_index}"
+        
         # convert conditions to tensor obj
         conditions = {
             "bbox_ratios": torch.tensor(selected_bbxs),
@@ -162,12 +169,10 @@ class NBAClipsDataset(torch.utils.data.Dataset):
         # transform
         transform = get_transforms_video(self.transform, (height, width))
         video = transform(video)  # T C H W
-        # breakpoint()
 
         # TCHW -> CTHW
         video: torch.Tensor = video.permute(1, 0, 2, 3)
         return {
-            "clip_annotation_idx": torch.tensor(sample_index),
             "video": video,
             "num_frames": torch.tensor(num_frames),
             "height": torch.tensor(height),
@@ -175,6 +180,8 @@ class NBAClipsDataset(torch.utils.data.Dataset):
             "ar": torch.tensor(ar),
             "fps": torch.tensor(video_fps),
             "conditions": conditions,
+            "clip_annotation_idx": torch.tensor(sample_index),
+            # "unnormalized_video": unnormalized_video,
             # "text": text,
         }
 
