@@ -19,7 +19,7 @@ class FourierFeatures(nn.Module):
 #TODO: d_model should come from hidden_dim in main diffuser
 #TODO: ablate hyperparameters
 class MultiTrajEncoder(nn.Module):
-    def __init__(self, num_frames=64, num_instances=10, d_model=1152, nhead=4, num_layers=2, device='cuda'):
+    def __init__(self, num_frames=300, num_instances=10, d_model=1152, nhead=4, num_layers=2, device='cuda'):
         super().__init__()
         self.d_model = d_model
         self.device = device
