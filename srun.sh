@@ -1,1 +1,1 @@
-sbatch -k train.sh 
+sbatch -k -J 'opensora-uncond-4f-360p' train.sh 

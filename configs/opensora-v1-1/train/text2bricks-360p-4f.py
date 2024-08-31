@@ -27,8 +27,8 @@ mask_ratios = {
 }
 
 # define acceleration
-num_workers = 0
-num_bucket_build_workers = 0
+num_workers = 8
+num_bucket_build_workers = 16
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
@@ -85,7 +85,7 @@ eval_fps = 4
 eval_batch_size = 1
 eval_steps = ckpt_every
 
-wandb = False
+wandb = True
 wandb_project_name = "Structured-Video-Generation"
 wandb_project_entity = "A New Entity"
 exp_id = "4f-full-ds"
