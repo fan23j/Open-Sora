@@ -61,7 +61,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
 
         # breakpoint()
         # dataset wrapper
-        self.filtered_dataset = FilteredClipDataset(DATASET_DIR)
+        self.filtered_dataset = FilteredClipDataset.from_default_directory()
 
         # HACK: using one sample
         self.annotation_file_paths: List[str] = (

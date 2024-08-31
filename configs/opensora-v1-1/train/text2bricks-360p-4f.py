@@ -7,9 +7,13 @@ dataset = dict(
     image_size=(None, None),
     transform_name="resize_crop",
 )
+
+# dict: {
+#     resolution: {num_frames: (aspect_ratio (w/h), batch_size)},}
 bucket_config = {
-    "360p": {4: (1.0, 4)},
+    "360p": {4: (1.78, 16)},
 }
+
 mask_ratios = {
     "mask_no": 0.75,
     "mask_quarter_random": 0.025,
@@ -59,7 +63,6 @@ scheduler_inference = dict(
 # misc
 seed = 42
 outputs = "outputs"
-wandb = True
 
 epochs = 1000
 log_every = 10
@@ -82,6 +85,7 @@ eval_fps = 4
 eval_batch_size = 1
 eval_steps = ckpt_every
 
+wandb = False
 wandb_project_name = "Structured-Video-Generation"
 wandb_project_entity = "A New Entity"
 exp_id = "4f-full-ds"

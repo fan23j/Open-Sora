@@ -69,6 +69,3 @@ def prepare_variable_dataloader(
         num_workers=num_workers,
         **_kwargs,
     )
-    
-def safe_collate_fn(dataloader: torch.utils.data.DataLoader):
-    pass

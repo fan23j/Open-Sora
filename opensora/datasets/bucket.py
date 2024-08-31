@@ -30,15 +30,15 @@ class Bucket:
     """
     A Bucket is a group of samples collated by similar resolution / # frames.
     """
-    
+
     def __init__(self, bucket_config: Dict):
         for key in bucket_config:
             assert key in ASPECT_RATIOS, f"Aspect ratio {key} not found."
-            
+
         # wrap config with OrderedDict
         bucket_probs = OrderedDict()
         bucket_bs = OrderedDict()
-        
+
         # sort buckets by aspect ratio
         bucket_names = sorted(
             bucket_config.keys(), key=lambda x: ASPECT_RATIOS[x][0], reverse=True
@@ -138,12 +138,13 @@ class Bucket:
         """
         Return the batch size of a bucket / group of samples.
         """
-        
+
         # an example bucket_id: ('360p', (64, 2))
-        return self.bucket_bs[bucket_id[0]][bucket_id[1]]
         # HACK: return the batch size of a bucket
         # resolution = list(self.bucket_bs.keys())[0]
         # return list(self.bucket_bs[resolution].keys())[0]
+
+        return self.bucket_bs[bucket_id[0]][bucket_id[1]]
 
     def __len__(self) -> int:
         return self.num_bucket

@@ -2,6 +2,7 @@ import warnings
 import torch
 import torch.distributed as dist
 
+from json import loads, dumps
 from pprint import pprint
 from collections import OrderedDict, defaultdict
 from typing import Iterator, List, Optional, Tuple
@@ -54,12 +55,34 @@ class VariableNBAClipsBatchSampler(DistributedSampler):
             type(self.dataset) is NBAClipsDataset
         ), f"Error: dataset.ann is {type(self.dataset)}"
 
-        # HACK: hard-coding buckets for now
+        batch_size_dict: dict = loads(dumps(self.bucket.bucket_bs))
+        assert len(batch_size_dict) == 1, f"Error: only 1 bucket is supported for now."
+
+        # e.g., "360p"
+        resolution: str = list(batch_size_dict.keys())[0]
+        frames_batch_size_dict: dict = list(batch_size_dict.values())[0]
+        num_frames: int = int(list(frames_batch_size_dict.keys())[0])
+
+        aspect_ratio: Optional[float] = None
+        candidate_aspect_ratios = self.bucket.ar_criteria[resolution][num_frames]
+        # find the correct aspect ratio for a given resolution
+        # e.g., 360p -> 1.78
+        for k, v in candidate_aspect_ratios.items():
+            width, height = v
+            user_input_height = int(resolution.replace("p", ""))
+            if height == user_input_height:
+                aspect_ratio = k
+                break
+
+        assert (
+            aspect_ratio is not None
+        ), f"Error: could not find a valid aspect ratio for resolution: {resolution}."
+
         bucket_sample_dict = {
             (
-                "360p",
-                4,
-                "1.00",
+                resolution,
+                num_frames,
+                aspect_ratio,
             ): self.dataset.filtered_dataset.filtered_clip_annotations_file_paths
         }
         return bucket_sample_dict

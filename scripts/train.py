@@ -248,14 +248,14 @@ def train(
         iteration_times = []
         for step, batch in pbar:
             start_time = time.time()
-            
+
             # this discusting logic loads the annotation wrapper for the current sample
             sample_annotation_wrapper = ClipAnnotationWrapper(
                 filtered_clip_dataset.filtered_clip_annotations_file_paths[
                     batch["clip_annotation_idx"].cpu().numpy()[0]
                 ]
             )
-            
+
             # HACK:
             # remove this addtional key to play nice with other models
             del batch["clip_annotation_idx"]
@@ -278,7 +278,7 @@ def train(
             running_loss += loss.item()
             log_step += 1
             acc_step += 1
-            
+
             running_loss, log_step = log_progress(
                 logger,
                 sample_annotation_wrapper,
