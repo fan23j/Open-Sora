@@ -516,6 +516,7 @@ class GaussianDiffusion:
         Returns a generator over dicts, where each dict is the return value of
         p_sample().
         """
+        
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
@@ -528,8 +529,7 @@ class GaussianDiffusion:
         if progress:
             # Lazy import so that we don't depend on tqdm.
             from tqdm.auto import tqdm
-
-            indices = tqdm(indices)
+            indices = tqdm(indices, desc="👟 Generating a sample...")
 
         for i in indices:
             t = torch.tensor([i] * shape[0], device=device)

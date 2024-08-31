@@ -61,8 +61,13 @@ class IDDPM(SpacedDiffusion):
         mask=None,
         conditions=None,
     ):
+        """
+        ...
+        """
+        
         n = len(prompts)
         z = torch.cat([z, z], 0)
+        
         model_args = dict()
         if additional_args is not None:
             model_args.update(additional_args)

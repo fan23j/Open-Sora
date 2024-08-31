@@ -228,6 +228,7 @@ def train(
     """
 
     filtered_clip_dataset: FilteredClipDataset = sampler_to_io.dataset.filtered_dataset
+    
     running_loss = 0.0
     log_step = 0
     acc_step = 0
@@ -353,6 +354,7 @@ def main():
     dtype = to_torch_dtype(cfg.dtype)
 
     writer: Optional[Any] = None
+    
     if not coordinator.is_master():
         logger = create_logger(None)
     else:

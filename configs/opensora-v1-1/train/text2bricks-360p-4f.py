@@ -11,7 +11,8 @@ dataset = dict(
 # dict: {
 #     resolution: {num_frames: (aspect_ratio (w/h), batch_size)},}
 bucket_config = {
-    "360p": {4: (1.78, 16)},
+    # "360p": {4: (1.78, 16)},
+    "360p": {4: (1.78, 4)},
 }
 
 mask_ratios = {
@@ -27,8 +28,8 @@ mask_ratios = {
 }
 
 # define acceleration
-num_workers = 8
-num_bucket_build_workers = 16
+num_workers = 0
+num_bucket_build_workers = 0
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
@@ -85,7 +86,7 @@ eval_fps = 4
 eval_batch_size = 1
 eval_steps = ckpt_every
 
-wandb = True
+wandb = False
 wandb_project_name = "Structured-Video-Generation"
 wandb_project_entity = "A New Entity"
 exp_id = "4f-full-ds"
