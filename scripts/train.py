@@ -31,6 +31,7 @@ from nba.src.entities.clip_annotations import ClipAnnotationWrapper
 # https://huggingface.co/hpcai-tech/OpenSora-STDiT-v3
 from opensora.models.stdit.stdit2 import STDiT2
 from opensora.models.vae import VideoAutoencoderKL
+from opensora.models.layers.blocks import CaptionEmbedder
 from opensora.schedulers.iddpm import IDDPM
 from opensora.utils.config_entity import TrainingConfig
 from opensora.utils.model_helpers import calculate_weight_norm, push_to_device
@@ -94,6 +95,7 @@ def process_batch(
     mask_generator: MaskGenerator,
     device: torch.device,
     dtype: torch.dtype,
+    y_embedder: CaptionEmbedder,
 ):
     """
     :params:
@@ -110,7 +112,20 @@ def process_batch(
     """
 
     x = batch.pop("video").to(device, dtype)  # [B, C, T, H, W]
-    # y = batch.pop("text")
+    # HACK: load text embedding, cast to `hidden_dim`
+    # embed, mask
+    y: Tuple[torch.tensor, torch.tensor] = torch.load(
+        "/mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora/text_embedding.pt"
+    )
+    y_embed = y[0].to(device, dtype)
+    
+    # out size: [1, 300, 1152]
+    y_embed = y_embedder(y_embed, train=False)
+    
+    x_num_frames = x.shape[2]
+    
+    # repeat y along dim 0 to match the number of frames
+    y_embed = y_embed.repeat(x_num_frames, 1, 1)
 
     # calculate visual and text encoding
     with torch.no_grad():
@@ -133,11 +148,12 @@ def process_batch(
         device=device,
     )
 
-    # predict noise: () and calculate loss
+    # predict noise & calculate loss
     # 10GB -> 35GB
-    loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
-    # pprint(loss_dict)
-    return loss_dict
+    loss_dict = scheduler.training_losses(model, x, y_embed, t, model_args, mask=mask)
+    
+    # HACK: return the `y_embed`
+    return loss_dict, y_embed
 
 
 def compute_and_apply_gradients(
@@ -226,13 +242,16 @@ def train(
     ema_shape_dict: Dict[str, Any],
     sampler_to_io: VariableNBAClipsBatchSampler,
     scheduler_inference: IDDPM,
+    y_embedder: CaptionEmbedder,
 ) -> None:
     """
     Main training loop.
     """
 
     filtered_clip_dataset: FilteredClipDataset = sampler_to_io.dataset.filtered_dataset
-    global_step = 0; log_step = 0; acc_step = 0
+    global_step = 0
+    log_step = 0
+    acc_step = 0
     running_loss = 0.0
 
     for epoch in range(start_epoch, cfg.epochs):
@@ -250,7 +269,7 @@ def train(
 
         iteration_times = []
         for step, batch in pbar:
-            
+
             start_time = time.time()
 
             # this discusting logic loads the annotation wrapper for the current sample
@@ -259,7 +278,7 @@ def train(
                     batch["clip_annotation_idx"].cpu().numpy()[0]
                 ]
             )
-            
+
             # use the batch var before we pop the video attribute
             if global_step % cfg.eval_steps == 0:
                 # pass in raw video tensor
@@ -277,8 +296,8 @@ def train(
 
             # mem: 8.6s GB
             # process the batch
-            loss_dict = process_batch(
-                batch, vae, model, scheduler, mask_generator, device, dtype
+            loss_dict, y_embed = process_batch(
+                batch, vae, model, scheduler, mask_generator, device, dtype, y_embedder
             )
             loss = loss_dict["loss"].mean()
 
@@ -332,6 +351,7 @@ def train(
             if global_step % cfg.eval_steps == 0:
                 write_sample(
                     model,
+                    y_embed,
                     vae,
                     scheduler_inference,
                     cfg,
@@ -468,6 +488,9 @@ def main():
         f"Trainable model params: {format_numel_str(model_numel_trainable)}, Total model params: {format_numel_str(model_numel)}"
     )
 
+    # caption embedder
+    y_embedder: CaptionEmbedder = model.y_embedder.to(device, dtype)
+
     # 4.2. create ema
     # model that tracks exponential moving avg of params
     ema: STDiT2 = deepcopy(model).to(torch.float32).to(device)
@@ -581,6 +604,7 @@ def main():
         ema_shape_dict,
         sampler_to_io,
         scheduler_inference,
+        y_embedder,
     )
 
 

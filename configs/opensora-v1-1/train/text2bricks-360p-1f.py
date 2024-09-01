@@ -10,11 +10,12 @@ dataset = dict(
 
 # dict: {
 #     resolution: {num_frames: (aspect_ratio (w/h), batch_size)},}
+
 bucket_config = {
-    # "360p": {1: (1.78, 64)},
-    "360p": {1: (1.78, 1)},
+    "360p": {4: (1.78, 16)},
 }
 
+# no masking for now
 mask_ratios = {
     "mask_no": 0.75,
     "mask_quarter_random": 0.025,
@@ -28,8 +29,8 @@ mask_ratios = {
 }
 
 # define acceleration
-num_workers = 0
-num_bucket_build_workers = 0
+num_workers = 8
+num_bucket_build_workers = 16
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
@@ -41,8 +42,8 @@ model = dict(
     from_pretrained=None,
     input_sq_size=512,
     qk_norm=True,
-    enable_flash_attn=True,
-    enable_layernorm_kernel=True,
+    enable_flash_attn=False,
+    enable_layernorm_kernel=False,
 )
 vae = dict(
     type="VideoAutoencoderKL",
@@ -67,7 +68,7 @@ outputs = "outputs"
 
 epochs = 1000
 log_every = 10
-ckpt_every = 500
+ckpt_every = 100
 load = None
 
 lr_schedule = "cosine_const"
@@ -78,15 +79,15 @@ batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-    "A basketball player missing a three-point shot",
+    "A basketball player makes a three-point shot.",
 ]
 eval_image_size = (360, 640)
-eval_num_frames = 1
-eval_fps = 1
+eval_num_frames = 4
+eval_fps = 4
 eval_batch_size = 1
 eval_steps = ckpt_every
 
-wandb = False
+wandb = True
 wandb_project_name = "Structured-Video-Generation"
 wandb_project_entity = "A New Entity"
-exp_id = "4f-vid-log-testing"
+exp_id = "4f-text-only-t2b-360p"

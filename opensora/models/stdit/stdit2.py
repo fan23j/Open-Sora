@@ -51,7 +51,6 @@ class STDiT2Block(nn.Module):
             hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel
         )
 
-        # TODO: freeze
         # spatial attention
         self.attn = Attention(
             hidden_size,
@@ -69,7 +68,7 @@ class STDiT2Block(nn.Module):
         # self.james = JAMES(ca_hidden_size=hidden_size, ca_num_heads=num_heads)
 
         # cross attn
-        # self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
+        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # mlp branch
         self.norm2 = get_layernorm(
@@ -114,6 +113,7 @@ class STDiT2Block(nn.Module):
     def forward(
         self,
         x,
+        y,
         t,
         t_tmp,
         x_mask=None,
@@ -121,9 +121,10 @@ class STDiT2Block(nn.Module):
         t0_tmp=None,
         T=None,
         S=None,
-        mask=None,
-        conditions=None,
+        mask=None,  # HACK
+        conditions=None,  # HACK
     ):
+        
         B, N, C = x.shape
 
         # 1. shift, scale, gate
@@ -186,10 +187,13 @@ class STDiT2Block(nn.Module):
             x_t = self.t_mask_select(x_mask, x_t, x_t_zero, T, S)
         else:
             x_t = gate_tmp * x_t
+
+        # 3a. drop out
         x = x + self.drop_path(x_t)
 
+        # HACK: load text embedding from .pt file
         # 4. inject text conditions via cross attn
-        # x = x + self.cross_attn(x, y, mask)
+        x = x + self.cross_attn(x, y, mask)
 
         # modulate
         x_m = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -362,6 +366,7 @@ class STDiT2(PreTrainedModel):
     def forward(
         self,
         x,
+        y, # text-embedding
         timestep,
         mask=None,
         x_mask=None,
@@ -455,6 +460,7 @@ class STDiT2(PreTrainedModel):
             x = auto_grad_checkpoint(
                 block,
                 x,
+                y,
                 t_spc_mlp,
                 t_tmp_mlp,
                 x_mask,
@@ -541,6 +547,7 @@ class STDiT2(PreTrainedModel):
             nn.init.constant_(block.attn_temp.proj.bias, 0)
 
     def initialize_weights(self):
+        
         # Initialize transformer layers:
         def _basic_init(module):
             if isinstance(module, nn.Linear):

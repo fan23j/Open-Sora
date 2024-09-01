@@ -38,9 +38,17 @@ class IDDPM(SpacedDiffusion):
         super().__init__(
             use_timesteps=space_timesteps(diffusion_steps, timestep_respacing),
             betas=betas,
-            model_mean_type=(gd.ModelMeanType.EPSILON if not predict_xstart else gd.ModelMeanType.START_X),
+            model_mean_type=(
+                gd.ModelMeanType.EPSILON
+                if not predict_xstart
+                else gd.ModelMeanType.START_X
+            ),
             model_var_type=(
-                (gd.ModelVarType.FIXED_LARGE if not sigma_small else gd.ModelVarType.FIXED_SMALL)
+                (
+                    gd.ModelVarType.FIXED_LARGE
+                    if not sigma_small
+                    else gd.ModelVarType.FIXED_SMALL
+                )
                 if not learn_sigma
                 else gd.ModelVarType.LEARNED_RANGE
             ),
@@ -54,6 +62,7 @@ class IDDPM(SpacedDiffusion):
     def sample(
         self,
         model,
+        y,
         z,
         prompts,
         device,
@@ -64,19 +73,28 @@ class IDDPM(SpacedDiffusion):
         """
         ...
         """
-        
+
         n = len(prompts)
         z = torch.cat([z, z], 0)
-        
+
         model_args = dict()
         if additional_args is not None:
             model_args.update(additional_args)
 
-        forward = partial(forward_with_cfg, model, cfg_scale=self.cfg_scale, cfg_channel=self.cfg_channel)
+        forward = partial(
+            forward_with_cfg,
+            model,
+            cfg_scale=self.cfg_scale,
+            cfg_channel=self.cfg_channel,
+        )
+        
+        # breakpoint()
+        
         samples = self.p_sample_loop(
             forward,
             z.shape,
-            z,
+            y,
+            noise=z,
             clip_denoised=False,
             model_kwargs=model_args,
             progress=True,
@@ -88,7 +106,7 @@ class IDDPM(SpacedDiffusion):
         return samples
 
 
-def forward_with_cfg(model, x, timestep, cfg_scale, cfg_channel=None, **kwargs):
+def forward_with_cfg(model, x, y, timestep, cfg_scale, cfg_channel=None, **kwargs):
     # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
     half = x[: len(x) // 2]
     combined = torch.cat([half, half], dim=0)
@@ -96,7 +114,8 @@ def forward_with_cfg(model, x, timestep, cfg_scale, cfg_channel=None, **kwargs):
         if len(kwargs["x_mask"]) != len(x):
             kwargs["x_mask"] = torch.cat([kwargs["x_mask"], kwargs["x_mask"]], dim=0)
 
-    model_out = model.forward(combined, timestep, **kwargs)
+    # HACK: add back text-embeds
+    model_out = model.forward(combined, y, timestep, **kwargs)
     model_out = model_out["x"] if isinstance(model_out, dict) else model_out
     if cfg_channel is None:
         cfg_channel = model_out.shape[1] // 2

@@ -33,6 +33,7 @@ z_log = None
 @torch.no_grad()
 def write_sample(
     model: STDiT2,
+    y: torch.Tensor,
     vae: VideoAutoencoderKL,
     scheduler: IDDPM,
     cfg: TrainingConfig,
@@ -86,9 +87,12 @@ def write_sample(
     for i in range(0, len(prompts), eval_batch_size):
         batch_prompts = prompts[i : i + eval_batch_size]
         batch_z = z[i : i + eval_batch_size]
+        
+        # HACK: repeat the # text prompts to match # frames in the output sample
         batch_samples = scheduler.sample(
             model,
-            z=batch_z,
+            y,
+            z,
             prompts=batch_prompts,
             device=device,
             additional_args=dict(

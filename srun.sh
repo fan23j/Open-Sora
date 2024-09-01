@@ -1,1 +1,1 @@
-sbatch -k -J 'opensora-uncond-4f-360p' train.sh 
+sbatch -k -J 'opensora-text-only-1f-360p' train.sh 
