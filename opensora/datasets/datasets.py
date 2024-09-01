@@ -182,7 +182,7 @@ class NBAClipsDataset(torch.utils.data.Dataset):
             "conditions": conditions,
             "clip_annotation_idx": torch.tensor(sample_index),
             # "unnormalized_video": unnormalized_video,
-            # "text": text,
+            # "text": text,d
         }
 
     def __len__(self) -> int:
