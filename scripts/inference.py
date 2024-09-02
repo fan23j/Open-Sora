@@ -125,7 +125,7 @@ def main():
             model_args["num_frames"] = model_args["num_frames"][: len(batch_prompts_raw)]
             model_args["ar"] = model_args["ar"][: len(batch_prompts_raw)]
             model_args["fps"] = model_args["fps"][: len(batch_prompts_raw)]
-            model_args["conditions"] = model_args["conditions"][: len(batch_prompts_raw)]
+            model_args["conditions"] = model_args["conditions"]
 
         # 4.3. diffusion sampling
         old_sample_idx = sample_idx

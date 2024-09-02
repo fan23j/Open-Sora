@@ -275,7 +275,7 @@ basketball_actions = [
 
 action_to_index = {action: i for i, action in enumerate(basketball_actions)}
 
-def get_embeddings_for_prompts(prompts, embeddings, mask):
+def get_embeddings_for_prompts(prompts, embeddings, mask, is_training):
     device = embeddings.device  # Get the device of the embeddings tensor
 
     # Convert list of prompts to indices
@@ -290,7 +290,9 @@ def get_embeddings_for_prompts(prompts, embeddings, mask):
     filtered_y_null = embeddings[26].unsqueeze(0).expand(len(prompts), -1, -1, -1)
     filtered_mask = torch.index_select(mask, 0, indices_tensor)
     
+    if is_training:
+        return filtered_embeddings, filtered_mask
     # Concatenate along the first dimension
-    combined_embeddings = torch.cat([filtered_embeddings, filtered_y_null], dim=0)
+    combined_embeddings = torch.cat([filtered_embeddings, filtered_y_null], 0)
     
     return combined_embeddings, filtered_mask

@@ -380,14 +380,13 @@ class STDiT2(PreTrainedModel):
             t0_tmp = None
             t0_spc_mlp = None
             t0_tmp_mlp = None
-
         # prepare y
         if conditions.get('text') is None:
             # inference
             conditions['text'] = ["A basketball player missing a three-point shot"]
-        y, mask = get_embeddings_for_prompts(conditions['text'], self.text_embeddings['y'], self.text_embeddings['mask'])
-        y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
+        y, mask = get_embeddings_for_prompts(conditions['text'], self.text_embeddings['y'], self.text_embeddings['mask'], self.training)
 
+        y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
         if mask is not None:
             if mask.shape[0] != y.shape[0]:
                 mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
@@ -397,7 +396,6 @@ class STDiT2(PreTrainedModel):
         else:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
-
         processed_conditions = self.james(conditions.copy())  # Use a copy of the input conditions
 
         # Ensure all tensors in processed_conditions are detached

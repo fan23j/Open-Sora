@@ -85,7 +85,7 @@ batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-        "",  
+        "A basketball player missing a three point shot",  
 ]
 
 eval_image_size = (360, 640)
