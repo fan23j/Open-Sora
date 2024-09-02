@@ -240,7 +240,7 @@ def extract_conditions(sample):
         sample["bbox_ratios"], 
     )
 
-    # conditions["text"] = sample["text"]
+    conditions["text"] = sample["text"]
     
     return conditions
 

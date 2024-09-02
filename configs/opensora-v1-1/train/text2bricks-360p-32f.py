@@ -96,5 +96,4 @@ eval_steps = ckpt_every
 
 wandb_project_name = "STDiT-Motion"
 wandb_project_entity = "Video-Generation-For-Structured-Behavior-Modeling"
-
 exp_id = "multi_traj_full_traj_new_adapter"

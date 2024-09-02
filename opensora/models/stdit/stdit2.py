@@ -59,7 +59,7 @@ class STDiT2Block(nn.Module):
         self.scale_shift_table = nn.Parameter(torch.randn(6, hidden_size) / hidden_size**0.5)
 
         # cross attn (text)
-        # self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
+        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # bbox cross attn
         self.bbox_cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
@@ -93,7 +93,7 @@ class STDiT2Block(nn.Module):
         x = rearrange(x, "B T S C -> B (T S) C")
         return x
 
-    def forward(self, x, t, t_tmp, x_mask=None, t0=None, t0_tmp=None, T=None, S=None, mask=None, conditions=None):
+    def forward(self, x, y, t, t_tmp, mask=None, x_mask=None, t0=None, t0_tmp=None, T=None, S=None, conditions=None):
         B, N, C = x.shape
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
@@ -117,7 +117,7 @@ class STDiT2Block(nn.Module):
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
         
         # inject conditions
-        x = self.bbox_cross_attn(x, conditions['bbox_features'])
+        x = x + self.bbox_cross_attn(x, conditions['bbox_features'])
 
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
@@ -149,8 +149,8 @@ class STDiT2Block(nn.Module):
             x_t = gate_tmp * x_t
         x = x + self.drop_path(x_t)
     
-        # # inject conditions
-        # x = self.cross_attn(x, conditions['text_embeddings'])
+        # inject conditions
+        x = x + self.cross_attn(x, y, mask)
 
         # modulate
         x_m = t2i_modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -256,10 +256,10 @@ class STDiT2(PreTrainedModel):
             act_layer=approx_gelu,
             token_num=config.model_max_length,
         )
-        # self.text_embeddings = torch.load('/mnt/mir/fan23j/data/nba-plus-statvu-dataset/__scripts__/text_embeddings_bfloat16.pth')
-        # transfer text embeddings to cuda
-        # for k, v in self.text_embeddings.items():
-        #     self.text_embeddings[k] = v.cuda().detach().requires_grad_(False)
+        self.text_embeddings = torch.load('/mnt/mir/fan23j/data/nba-plus-statvu-dataset/__scripts__/text_embeddings_bfloat16.pth')
+        #transfer text embeddings to cuda
+        for k, v in self.text_embeddings.items():
+            self.text_embeddings[k] = v.cuda().detach().requires_grad_(False)
 
         # condition module
         self.james = JAMES()
@@ -314,7 +314,7 @@ class STDiT2(PreTrainedModel):
         return (T, H, W)
 
     def forward(
-        self, x, timestep, mask=None, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None, conditions=None
+        self, x, timestep, x_mask=None, num_frames=None, height=None, width=None, ar=None, fps=None, conditions=None
     ):
         """
         Forward pass of STDiT.
@@ -381,25 +381,24 @@ class STDiT2(PreTrainedModel):
             t0_spc_mlp = None
             t0_tmp_mlp = None
 
-        # # prepare y
-        # if conditions.get('text') is None:
-        #     # inference
-        #     conditions['text'] = ["A basketball player missing a three-point shot"]
-        # y, mask = get_embeddings_for_prompts(conditions['text'], self.text_embeddings['y'], self.text_embeddings['mask'])
-        # y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
+        # prepare y
+        if conditions.get('text') is None:
+            # inference
+            conditions['text'] = ["A basketball player missing a three-point shot"]
+        y, mask = get_embeddings_for_prompts(conditions['text'], self.text_embeddings['y'], self.text_embeddings['mask'])
+        y = self.y_embedder(y, self.training)  # [B, 1, N_token, C]
 
-        # if mask is not None:
-        #     if mask.shape[0] != y.shape[0]:
-        #         mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
-        #     mask = mask.squeeze(1).squeeze(1)
-        #     y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
-        #     y_lens = mask.sum(dim=1).tolist()
-        # else:
-        #     y_lens = [y.shape[2]] * y.shape[0]
-        #     y = y.squeeze(1).view(1, -1, x.shape[-1])
+        if mask is not None:
+            if mask.shape[0] != y.shape[0]:
+                mask = mask.repeat(y.shape[0] // mask.shape[0], 1)
+            mask = mask.squeeze(1).squeeze(1)
+            y = y.squeeze(1).masked_select(mask.unsqueeze(-1) != 0).view(1, -1, x.shape[-1])
+            y_lens = mask.sum(dim=1).tolist()
+        else:
+            y_lens = [y.shape[2]] * y.shape[0]
+            y = y.squeeze(1).view(1, -1, x.shape[-1])
 
         processed_conditions = self.james(conditions.copy())  # Use a copy of the input conditions
-        # processed_conditions['text_embeddings'] = y
 
         # Ensure all tensors in processed_conditions are detached
         processed_conditions = {k: v.detach() if isinstance(v, torch.Tensor) else v 
@@ -410,14 +409,15 @@ class STDiT2(PreTrainedModel):
             x = auto_grad_checkpoint(
                 block,
                 x,
+                y,
                 t_spc_mlp,
                 t_tmp_mlp,
+                y_lens,
                 x_mask,
                 t0_spc_mlp,
                 t0_tmp_mlp,
                 T,
                 S,
-                mask,
                 processed_conditions,
             )
             # x.shape: [B, N, C]
