@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -D /mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora
 #SBATCH --partition=a6000
-#SBATCH --nodelist=mirage.ib
+#SBATCH --nodelist=arcee.ib
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=64
 #SBATCH --gres=gpu:8
@@ -11,7 +11,7 @@ export PYTHONUNBUFFERED=TRUE
 export PYTHONPATH=/mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora:$PYTHONPATH
 
 cd /mnt/opr/levlevi/opr/video-generation-hbm/Open-Sora
-/playpen-storage/levlevi/anaconda3/condabin/conda  activate op-2
+/mnt/mir/levlevi/anaconda3/condabin/conda  activate op-2
 
 RANDOM_PORT=$((20000 + RANDOM % 20000))
 OMP_NUM_THREADS=52 /playpen-storage/levlevi/anaconda3/envs/op-2/bin/torchrun --master_port=$RANDOM_PORT --nproc_per_node 8  scripts/train.py \

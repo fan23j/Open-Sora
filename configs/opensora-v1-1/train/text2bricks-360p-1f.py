@@ -12,7 +12,7 @@ dataset = dict(
 #     resolution: {num_frames: (aspect_ratio (w/h), batch_size)},}
 
 bucket_config = {
-    "360p": {4: (1.78, 16)},
+    "360p": {4: (1.0, 16)},
 }
 
 # no masking for now
@@ -79,7 +79,7 @@ batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-    "A basketball player makes a three-point shot.",
+    "A basketball player makes a three-point shot",
 ]
 eval_image_size = (360, 640)
 eval_num_frames = 4
@@ -90,4 +90,4 @@ eval_steps = ckpt_every
 wandb = True
 wandb_project_name = "Structured-Video-Generation"
 wandb_project_entity = "A New Entity"
-exp_id = "4f-text-only-t2b-360p"
+exp_id = "4f-text-t2b-360p-1.0-ar"

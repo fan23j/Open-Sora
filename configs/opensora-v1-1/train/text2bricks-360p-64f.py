@@ -1,4 +1,4 @@
-# Define dataset
+# define dataset
 dataset = dict(
     type="VariableVideoTextDataset",
     data_path=None,
@@ -7,9 +7,15 @@ dataset = dict(
     image_size=(None, None),
     transform_name="resize_crop",
 )
+
+# dict: {
+#     resolution: {num_frames: (aspect_ratio (w/h), batch_size)},}
+
 bucket_config = {
-    "360p": {64: (1.0, 2)},
+    "360p": {64: (1.78, 1)},
 }
+
+# no masking for now
 mask_ratios = {
     "mask_no": 0.75,
     "mask_quarter_random": 0.025,
@@ -22,15 +28,15 @@ mask_ratios = {
     "mask_image_head_tail": 0.05,
 }
 
-# Define acceleration
+# define acceleration
 num_workers = 8
-num_bucket_build_workers = 8
+num_bucket_build_workers = 16
 dtype = "bf16"
 grad_checkpoint = True
 plugin = "zero2"
 sp_size = 1
 
-# Define model
+# define model
 model = dict(
     type="STDiT2-XL/2",
     from_pretrained=None,
@@ -56,33 +62,32 @@ scheduler_inference = dict(
     cfg_channel=3,  # or None
 )
 
-# Others
+# misc
 seed = 42
 outputs = "outputs"
-wandb = False
 
 epochs = 1000
 log_every = 10
-ckpt_every = 500
+ckpt_every = 100
 load = None
 
 lr_schedule = "cosine_const"
 warmup_steps = 1
 lr = 1e-5
 
-batch_size = 1
+batch_size = None
 grad_clip = 1.0
 
 eval_prompts = [
-    "A basketball player missing a three-point shot",
+    "A basketball player makes a three-point shot.",
 ]
-
 eval_image_size = (360, 640)
 eval_num_frames = 64
-eval_fps = 8
+eval_fps = 15
 eval_batch_size = 1
 eval_steps = ckpt_every
 
-wandb_project_name = "STDiT-Motion"
-wandb_project_entity = "Video-Generation-For-Structured-Behavior-Modeling"
-exp_id = "multi_traj_unaligned"
+wandb = True
+wandb_project_name = "Structured-Video-Generation"
+wandb_project_entity = "A New Entity"
+exp_id = "64f-text-only-t2b-360p"
