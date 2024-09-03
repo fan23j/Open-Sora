@@ -33,7 +33,7 @@ from opensora.utils.config_utils import (
     save_training_config,
 )
 from opensora.utils.misc import all_reduce_mean, format_numel_str, get_model_numel, requires_grad, to_torch_dtype
-from opensora.utils.train_utils import MaskGenerator, update_ema
+from opensora.utils.train_utils import MaskGenerator, update_ema, create_video_comparison_callback
 
 
 from torch.optim.lr_scheduler import LRScheduler as _LRScheduler
@@ -600,10 +600,13 @@ def main():
                 # Video info and conditions
                 for k, v in batch.items():
                     model_args[k] = push_to_device(v, device, dtype)
+                
+                global_step = epoch * num_steps_per_epoch + step
 
                 # Diffusion
                 t = torch.randint(0, scheduler.num_timesteps, (x.shape[0],), device=device)
-                loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask)
+                save_video = create_video_comparison_callback(exp_dir, global_step) if global_step % cfg.eval_steps == 0 else None
+                loss_dict = scheduler.training_losses(model, x, t, model_args, mask=mask, save_video=save_video)
 
                 # Backward & update
                 loss = loss_dict["loss"].mean()
@@ -619,7 +622,6 @@ def main():
                 # Log loss values:
                 all_reduce_mean(loss)
                 running_loss += loss.item()
-                global_step = epoch * num_steps_per_epoch + step
                 log_step += 1
                 acc_step += 1
                 iteration_times.append(time.time() - start_time)
@@ -652,25 +654,25 @@ def main():
                         iteration_times = []
 
                 # Save checkpoint
-                if cfg.ckpt_every > 0 and global_step % cfg.ckpt_every == 0 and global_step != 0:
-                    save(
-                        booster,
-                        model,
-                        ema,
-                        optimizer,
-                        lr_scheduler,
-                        epoch,
-                        step + 1,
-                        global_step + 1,
-                        cfg.batch_size,
-                        coordinator,
-                        exp_dir,
-                        ema_shape_dict,
-                        sampler=sampler_to_io,
-                    )
-                    logger.info(
-                        f"Saved checkpoint at epoch {epoch} step {step + 1} global_step {global_step + 1} to {exp_dir}"
-                    )
+                # if cfg.ckpt_every > 0 and global_step % cfg.ckpt_every == 0 and global_step != 0:
+                    # save(
+                    #     booster,
+                    #     model,
+                    #     ema,
+                    #     optimizer,
+                    #     lr_scheduler,
+                    #     epoch,
+                    #     step + 1,
+                    #     global_step + 1,
+                    #     cfg.batch_size,
+                    #     coordinator,
+                    #     exp_dir,
+                    #     ema_shape_dict,
+                    #     sampler=sampler_to_io,
+                    # )
+                    # logger.info(
+                    #     f"Saved checkpoint at epoch {epoch} step {step + 1} global_step {global_step + 1} to {exp_dir}"
+                    # )
 
                     # log prompts for each checkpoints
                 if global_step % cfg.eval_steps == 0:

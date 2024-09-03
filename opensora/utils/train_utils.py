@@ -3,6 +3,8 @@ import random
 from collections import OrderedDict
 
 import torch
+import cv2
+import numpy as np
 
 
 @torch.no_grad()
@@ -120,3 +122,80 @@ class MaskGenerator:
             masks.append(mask)
         masks = torch.stack(masks, dim=0)
         return masks
+
+
+def create_video_comparison_callback(save_dir, global_step):
+    def save_comparison_video(x_start, x_t, t, save_dir=save_dir, global_step=global_step):
+        # Denormalize the tensors
+        x_start = denormalize(x_start)
+        x_t = denormalize(x_t)
+
+        # Convert to float32 if necessary and move to CPU
+        x_start = x_start.float().cpu()
+        x_t = x_t.float().cpu()
+
+        # Convert to NumPy arrays
+        x_start_np = x_start.detach().numpy()
+        x_t_np = x_t.detach().numpy()
+
+        # Assuming x_start and x_t are in the format [batch, channels, frames, height, width]
+        batch_size, channels, num_frames, height, width = x_start_np.shape
+
+        for i in range(batch_size):
+            # Create a side-by-side comparison video
+            comparison = np.zeros((height, width * 2, 3, num_frames))
+            
+            # Convert videos to RGB format
+            x_start_rgb = convert_to_rgb(x_start_np[i])
+            x_t_rgb = convert_to_rgb(x_t_np[i])
+            
+            comparison[:, :width, :, :] = x_start_rgb
+            comparison[:, width:, :, :] = x_t_rgb
+
+            # Clip values to [0, 1] range
+            comparison = np.clip(comparison, 0, 1)
+
+            # Convert to uint8
+            comparison = (comparison * 255).astype(np.uint8)
+
+            # Save the comparison video
+            filename = f"{save_dir}/comparison_video_batch{i}_t{t[i].item()}_{global_step}.mp4"
+            save_video(comparison, filename)
+            break
+
+    return save_comparison_video
+
+def denormalize(tensor):
+    """
+    Denormalize the tensor that was normalized with mean [0.5, 0.5, 0.5] and std [0.5, 0.5, 0.5]
+    """
+    return tensor * 0.5 + 0.5
+
+def convert_to_rgb(video):
+    # Assuming video shape is (channels, frames, height, width)
+    if video.shape[0] == 4:
+        # If 4 channels, assume RGBA and convert to RGB
+        rgb = video[:3, ...]
+    elif video.shape[0] == 1:
+        # If 1 channel, assume grayscale and repeat to create RGB
+        rgb = np.repeat(video, 3, axis=0)
+    else:
+        # If already 3 channels, assume it's already RGB
+        rgb = video
+    
+    # Ensure the shape is (height, width, 3, frames)
+    return np.transpose(rgb, (2, 3, 0, 1))
+
+def save_video(video_frames, filename):
+    # Assuming video_frames is in the format [height, width, channels, frames]
+    height, width, channels, num_frames = video_frames.shape
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(filename, fourcc, 30.0, (width, height))
+
+    for i in range(num_frames):
+        frame = video_frames[:, :, :, i]
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        out.write(frame)
+
+    out.release()

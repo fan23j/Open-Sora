@@ -149,6 +149,7 @@ class VariableVideoTextDataset(VideoTextDataset):
 
             # transform
             transform = get_transforms_video(self.transform_name, (height, width))
+            # untransformed_video = video.clone()
             video = transform(video)  # T C H W
         else:
             # loading
@@ -173,4 +174,5 @@ class VariableVideoTextDataset(VideoTextDataset):
             "ar": ar,
             "fps": video_fps,
             "conditions": conditions,
+            # "untransformed_video": untransformed_video,
         }
