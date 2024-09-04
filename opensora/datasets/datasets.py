@@ -131,6 +131,8 @@ class VariableVideoTextDataset(VideoTextDataset):
         path = sample["path"]
         if path.endswith('.pkl'):
             video_path = re.sub(r'_annotation_(\d).pkl$', r'_\1.mp4', path)
+        else:
+            video_path = path
         text = sample["text"]
         file_type = self.get_type(video_path)
         ar = height / width
@@ -138,7 +140,8 @@ class VariableVideoTextDataset(VideoTextDataset):
         video_fps = 24  # default fps
         if file_type == "video":
             # loading
-            path = f'/mnt/mir/fan23j/data/nba-plus-statvu-dataset/filtered-clips/{video_path}'
+            #path = f'/mnt/mir/fan23j/data/nba-plus-statvu-dataset/filtered-clips/{video_path}'
+            path = f'/mnt/mir/fan23j/data/hq-basketball-dataset/{video_path}'
             vframes, _, infos = torchvision.io.read_video(filename=path, pts_unit="sec", output_format="TCHW")
             if "video_fps" in infos:
                 video_fps = infos["video_fps"]

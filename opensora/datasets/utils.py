@@ -236,9 +236,10 @@ def bounding_box_string_to_tensor(bbox_string, num_instances=10, num_frames=300)
 
 def extract_conditions(sample):
     conditions = {}
-    conditions["bbox_ratios"] = bounding_box_string_to_tensor(
-        sample["bbox_ratios"], 
-    )
+    if "bbox_ratios" in sample:
+        conditions["bbox_ratios"] = bounding_box_string_to_tensor(
+            sample["bbox_ratios"], 
+        )
 
     conditions["text"] = sample["text"]
     

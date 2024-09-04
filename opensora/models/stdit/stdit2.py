@@ -62,7 +62,7 @@ class STDiT2Block(nn.Module):
         self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # bbox cross attn
-        self.bbox_cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
+        #self.bbox_cross_attn = MultiHeadCrossAttention(hidden_size, num_heads)
 
         # mlp branch
         self.norm2 = get_layernorm(hidden_size, eps=1e-6, affine=False, use_kernel=enable_layernorm_kernel)
@@ -117,7 +117,7 @@ class STDiT2Block(nn.Module):
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
         
         # inject conditions
-        x = x + self.bbox_cross_attn(x, conditions['bbox_features'])
+        #x = x + self.bbox_cross_attn(x, conditions['bbox_features'])
 
         # spatial branch
         x_s = rearrange(x_m, "B (T S) C -> (B T) S C", T=T, S=S)
@@ -262,7 +262,7 @@ class STDiT2(PreTrainedModel):
             self.text_embeddings[k] = v.cuda().detach().requires_grad_(False)
 
         # condition module
-        self.james = JAMES()
+        #self.james = JAMES()
 
         drop_path = [x.item() for x in torch.linspace(0, config.drop_path, config.depth)]
         self.rope = RotaryEmbedding(dim=self.hidden_size // self.num_heads)  # new
@@ -396,12 +396,12 @@ class STDiT2(PreTrainedModel):
         else:
             y_lens = [y.shape[2]] * y.shape[0]
             y = y.squeeze(1).view(1, -1, x.shape[-1])
-        processed_conditions = self.james(conditions.copy())  # Use a copy of the input conditions
+        #processed_conditions = self.james(conditions.copy())  # Use a copy of the input conditions
 
         # Ensure all tensors in processed_conditions are detached
-        processed_conditions = {k: v.detach() if isinstance(v, torch.Tensor) else v 
-                            for k, v in processed_conditions.items()}
-
+        # processed_conditions = {k: v.detach() if isinstance(v, torch.Tensor) else v 
+        #                     for k, v in processed_conditions.items()}
+        processed_conditions = conditions
         # blocks
         for _, block in enumerate(self.blocks):
             x = auto_grad_checkpoint(
